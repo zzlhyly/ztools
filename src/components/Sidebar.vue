@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { useRouter, useRoute } from 'vue-router'
-import { useAppStore } from '@/stores/app'
+import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useAppStore } from '@/stores/app'
 import {
   Braces,
   Code2,
@@ -11,27 +11,36 @@ import {
   Regex,
   Palette,
   Hash,
-  PanelLeftClose,
-  PanelLeftOpen,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-vue-next'
+import type { Component } from 'vue'
 
-const router = useRouter()
 const route = useRoute()
-const appStore = useAppStore()
+const router = useRouter()
 const { t } = useI18n()
+const appStore = useAppStore()
 
-const tools = [
-  { path: '/json', icon: Braces, labelKey: 'tools.json.name' },
-  { path: '/xml', icon: Code2, labelKey: 'tools.xml.name' },
-  { path: '/base64', icon: Binary, labelKey: 'tools.base64.name' },
-  { path: '/url', icon: Link, labelKey: 'tools.url.name' },
-  { path: '/timestamp', icon: Clock, labelKey: 'tools.timestamp.name' },
-  { path: '/regex', icon: Regex, labelKey: 'tools.regex.name' },
-  { path: '/color', icon: Palette, labelKey: 'tools.color.name' },
-  { path: '/hash', icon: Hash, labelKey: 'tools.hash.name' },
+interface ToolItem {
+  path: string
+  icon: Component
+  key: string
+}
+
+const tools: ToolItem[] = [
+  { path: '/json', icon: Braces, key: 'json' },
+  { path: '/xml', icon: Code2, key: 'xml' },
+  { path: '/base64', icon: Binary, key: 'base64' },
+  { path: '/url', icon: Link, key: 'url' },
+  { path: '/timestamp', icon: Clock, key: 'timestamp' },
+  { path: '/regex', icon: Regex, key: 'regex' },
+  { path: '/color', icon: Palette, key: 'color' },
+  { path: '/hash', icon: Hash, key: 'hash' },
 ]
 
-function navigateTo(path: string) {
+const isActive = (path: string) => route.path === path
+
+const navigateTo = (path: string) => {
   router.push(path)
   appStore.addRecentTool(path)
 }
@@ -39,27 +48,25 @@ function navigateTo(path: string) {
 
 <template>
   <aside class="sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
-    <div class="sidebar-tools">
+    <nav class="sidebar-nav">
       <div
         v-for="tool in tools"
         :key="tool.path"
-        class="sidebar-item"
-        :class="{ active: route.path === tool.path }"
+        class="menu-item"
+        :class="{ active: isActive(tool.path) }"
+        :title="t(`tools.${tool.key}.name`)"
         @click="navigateTo(tool.path)"
       >
-        <el-icon :size="20"><component :is="tool.icon" /></el-icon>
-        <span v-if="!appStore.sidebarCollapsed" class="sidebar-label">{{ t(tool.labelKey) }}</span>
+        <component :is="tool.icon" :size="20" />
+        <span v-if="!appStore.sidebarCollapsed" class="menu-text">
+          {{ t(`tools.${tool.key}.name`) }}
+        </span>
       </div>
-    </div>
-    <div class="sidebar-footer">
-      <div class="sidebar-item" @click="appStore.toggleSidebar">
-        <el-icon :size="20">
-          <PanelLeftClose v-if="!appStore.sidebarCollapsed" />
-          <PanelLeftOpen v-else />
-        </el-icon>
-        <span v-if="!appStore.sidebarCollapsed" class="sidebar-label">Collapse</span>
-      </div>
-    </div>
+    </nav>
+    <button class="toggle-button" @click="appStore.toggleSidebar()">
+      <ChevronLeft v-if="!appStore.sidebarCollapsed" :size="16" />
+      <ChevronRight v-else :size="16" />
+    </button>
   </aside>
 </template>
 
@@ -69,49 +76,63 @@ function navigateTo(path: string) {
   flex-direction: column;
   width: var(--sidebar-width);
   background-color: var(--bg-color);
-  border-right: 1px solid var(--border-color-lighter);
-  transition: width 0.3s;
-  overflow: hidden;
+  border-right: 1px solid var(--border-color);
+  transition: width 0.3s ease;
 }
 
 .sidebar.collapsed {
   width: var(--sidebar-collapsed-width);
 }
 
-.sidebar-tools {
+.sidebar-nav {
   flex: 1;
   padding: var(--spacing-sm);
   overflow-y: auto;
 }
 
-.sidebar-item {
+.menu-item {
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
   padding: var(--spacing-sm) var(--spacing-md);
+  margin-bottom: var(--spacing-xs);
   border-radius: var(--radius-md);
   cursor: pointer;
   color: var(--text-color-regular);
   transition: all 0.2s;
   white-space: nowrap;
+  overflow: hidden;
 }
 
-.sidebar-item:hover {
+.menu-item:hover {
   background-color: var(--bg-color-page);
   color: var(--text-color-primary);
 }
 
-.sidebar-item.active {
+.menu-item.active {
   background-color: var(--color-primary);
-  color: #fff;
+  color: white;
 }
 
-.sidebar-label {
-  font-size: var(--font-size-sm);
+.menu-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sidebar-footer {
+.toggle-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: var(--spacing-sm);
-  border-top: 1px solid var(--border-color-lighter);
+  border: none;
+  background: transparent;
+  color: var(--text-color-secondary);
+  cursor: pointer;
+  border-top: 1px solid var(--border-color);
+}
+
+.toggle-button:hover {
+  color: var(--text-color-primary);
+  background-color: var(--bg-color-page);
 }
 </style>
