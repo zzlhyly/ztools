@@ -1,30 +1,38 @@
 <script setup lang="ts">
-import { useAppStore } from '@/stores/app'
-import { Moon, Sun, Monitor } from 'lucide-vue-next'
+import { ref, onMounted } from 'vue'
+import { Minus, X, Maximize2 } from 'lucide-vue-next'
+import { minimizeWindow, maximizeWindow, closeWindow } from '@/utils/window'
 
-defineProps<{
-  title: string
-}>()
+const props = withDefaults(defineProps<{
+  title?: string
+}>(), {
+  title: 'ztools',
+})
 
-const appStore = useAppStore()
+const isMac = ref(false)
+
+onMounted(() => {
+  isMac.value = navigator.platform.includes('Mac')
+})
 </script>
 
 <template>
-  <header class="titlebar" data-tauri-drag-region>
-    <span class="titlebar-title">{{ title }}</span>
-    <div class="titlebar-actions">
-      <el-dropdown @command="appStore.setTheme" trigger="click">
-        <el-button :icon="appStore.isDark ? Moon : Sun" circle size="small" />
-        <template #dropdown>
-          <el-dropdown-menu>
-            <el-dropdown-item :icon="Sun" command="light">Light</el-dropdown-item>
-            <el-dropdown-item :icon="Moon" command="dark">Dark</el-dropdown-item>
-            <el-dropdown-item :icon="Monitor" command="system">System</el-dropdown-item>
-          </el-dropdown-menu>
-        </template>
-      </el-dropdown>
+  <div data-tauri-drag-region class="titlebar" :class="{ 'is-mac': isMac }">
+    <div class="titlebar-title" :style="{ paddingLeft: isMac ? '70px' : '16px' }">
+      🔧 {{ title }}
     </div>
-  </header>
+    <div v-if="!isMac" class="titlebar-controls">
+      <button class="titlebar-button" @click="minimizeWindow">
+        <Minus :size="14" />
+      </button>
+      <button class="titlebar-button" @click="maximizeWindow">
+        <Maximize2 :size="14" />
+      </button>
+      <button class="titlebar-button close" @click="closeWindow">
+        <X :size="14" />
+      </button>
+    </div>
+  </div>
 </template>
 
 <style scoped>
@@ -33,10 +41,10 @@ const appStore = useAppStore()
   align-items: center;
   justify-content: space-between;
   height: var(--titlebar-height);
-  padding: 0 var(--spacing-md);
   background-color: var(--bg-color);
-  border-bottom: 1px solid var(--border-color-lighter);
+  border-bottom: 1px solid var(--border-color);
   user-select: none;
+  -webkit-user-select: none;
 }
 
 .titlebar-title {
@@ -45,9 +53,30 @@ const appStore = useAppStore()
   color: var(--text-color-primary);
 }
 
-.titlebar-actions {
+.titlebar-controls {
+  display: flex;
+  height: 100%;
+}
+
+.titlebar-button {
   display: flex;
   align-items: center;
-  gap: var(--spacing-xs);
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-color-regular);
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.titlebar-button:hover {
+  background-color: var(--bg-color-page);
+}
+
+.titlebar-button.close:hover {
+  background-color: var(--color-danger);
+  color: white;
 }
 </style>
