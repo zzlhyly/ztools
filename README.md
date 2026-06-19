@@ -1,54 +1,63 @@
 # ztools
 
-A desktop application built with [Tauri](https://tauri.app/), [Vue 3](https://vuejs.org/), and [TypeScript](https://www.typescriptlang.org/).
+A desktop toolkit application for developers, built with [Tauri v2](https://tauri.app/), [Vue 3](https://vuejs.org/), and [Element Plus](https://element-plus.org/).
+
+[中文文档](./README_zh-CN.md)
+
+## Features
+
+- **JSON Formatter** - Format, minify, and validate JSON data
+- **XML Formatter** - Format and validate XML data
+- **Base64 Encoder/Decoder** - Encode and decode Base64 with UTF-8 support
+- **URL Encoder/Decoder** - Encode and decode URLs
+- **Timestamp Converter** - Convert between timestamps and dates
+- **Regex Tester** - Test regular expressions with flags support
+- **Color Converter** - Convert between HEX, RGB, and HSL colors
+- **Hash Calculator** - Calculate SHA-1, SHA-256, SHA-384, SHA-512 hashes
 
 ## Tech Stack
 
-- **Frontend**: Vue 3 + TypeScript + Vite
-- **Backend**: Rust (Tauri)
-- **Build Tool**: Vite
-- **Package Manager**: npm
+- **Frontend**: Vue 3 + TypeScript + Element Plus
+- **Backend**: Rust (Tauri v2)
+- **Build Tool**: Vite 6
+- **State Management**: Pinia
+- **Internationalization**: vue-i18n (中文/English)
+- **Testing**: Vitest
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- [Node.js](https://nodejs.org/) (v16 or later)
-- [npm](https://www.npmjs.com/) (v7 or later)
+- [Node.js](https://nodejs.org/) v16+
+- [npm](https://www.npmjs.com/) v7+
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable)
-- [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites) (optional, but recommended)
 
 ## Installation
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/ztools.git
-   cd ztools
-   ```
+```bash
+# Clone the repository
+git clone https://github.com/your-username/ztools.git
+cd ztools
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+# Install dependencies
+npm install
+```
 
 ## Development
 
-To start the development server:
-
 ```bash
+# Start development server
 npm run tauri dev
-```
 
-This will:
-- Start the Vite dev server for the frontend
-- Compile and run the Tauri backend
-- Open the application window
+# Run tests
+npm run test
+
+# Run tests with coverage
+npm run test:coverage
+```
 
 ## Building
 
-To build the application for production:
-
 ```bash
+# Build for production
 npm run tauri build
 ```
 
@@ -58,23 +67,47 @@ The built application will be located in `src-tauri/target/release/bundle/`.
 
 ```
 ztools/
-├── src/                  # Frontend source code
-│   ├── App.vue           # Main Vue component
-│   ├── main.ts           # Entry point
-│   └── assets/           # Static assets
-├── src-tauri/            # Rust backend code
-│   ├── src/              # Rust source files
-│   │   ├── lib.rs        # Library code
-│   │   └── main.rs       # Main entry point
-│   ├── Cargo.toml        # Rust dependencies
-│   └── tauri.conf.json   # Tauri configuration
-├── public/               # Public static assets
-├── package.json          # Node.js dependencies and scripts
-├── vite.config.ts        # Vite configuration
-├── tsconfig.json         # TypeScript configuration
-└── LICENSE               # MIT License
+├── src/
+│   ├── components/          # Shared components
+│   │   ├── TitleBar.vue     # Custom title bar
+│   │   ├── Sidebar.vue      # Navigation sidebar
+│   │   └── ToolLayout.vue   # Tool page layout
+│   ├── tools/               # Tool pages
+│   │   ├── JsonFormatter.vue
+│   │   ├── XmlFormatter.vue
+│   │   ├── Base64Tool.vue
+│   │   ├── UrlEncoder.vue
+│   │   ├── TimestampConverter.vue
+│   │   ├── RegexTester.vue
+│   │   ├── ColorConverter.vue
+│   │   └── HashCalculator.vue
+│   ├── stores/              # Pinia stores
+│   ├── router/              # Vue Router
+│   ├── i18n/                # Translations
+│   ├── utils/               # Utility functions
+│   └── styles/              # CSS variables & global styles
+├── src-tauri/               # Tauri backend (Rust)
+├── docs/                    # Documentation
+└── package.json
 ```
+
+## Testing
+
+```bash
+# Run all tests
+npm run test
+
+# Run tests in watch mode
+npm run test:watch
+
+# Run tests with coverage
+npm run test:coverage
+```
+
+## Internationalization
+
+The application supports Chinese and English. Language can be switched in the sidebar.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+MIT License - see [LICENSE](LICENSE) for details.
