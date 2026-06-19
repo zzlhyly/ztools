@@ -512,7 +512,7 @@ Expected: FAIL - "Cannot find module '../app'"
 ```typescript
 // src/stores/app.ts
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 export const useAppStore = defineStore('app', () => {
   // State
@@ -525,28 +525,22 @@ export const useAppStore = defineStore('app', () => {
   )
   const locale = ref(localStorage.getItem('locale') || 'zh-CN')
 
-  // Computed
-  const isDark = ref(false)
-
-  // Update isDark based on theme
-  function updateIsDark() {
+  // Computed - 自动响应 theme 变化
+  const isDark = computed(() => {
     if (theme.value === 'system') {
-      isDark.value = window.matchMedia('(prefers-color-scheme: dark)').matches
-    } else {
-      isDark.value = theme.value === 'dark'
+      return window.matchMedia('(prefers-color-scheme: dark)').matches
     }
-  }
+    return theme.value === 'dark'
+  })
 
-  // Listen for system theme changes
-  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-  mediaQuery.addEventListener('change', updateIsDark)
-  updateIsDark()
-
-  // Watch theme changes
+  // Watch theme changes and update DOM
   watch(theme, (newTheme) => {
     localStorage.setItem('theme', newTheme)
-    updateIsDark()
-    document.documentElement.classList.toggle('dark', isDark.value)
+  })
+
+  // Watch isDark changes and update DOM class
+  watch(isDark, (dark) => {
+    document.documentElement.classList.toggle('dark', dark)
   }, { immediate: true })
 
   // Watch locale changes
@@ -1197,12 +1191,58 @@ git commit -m "feat: add clipboard and window control utilities"
 
 ---
 
-## Task 8: Vite 配置更新
+## Task 8: Vite 配置和 Tauri 配置
 
 **Files:**
 - Modify: `vite.config.ts`
+- Modify: `src-tauri/tauri.conf.json`
 
-- [ ] **Step 1: 更新 Vite 配置**
+- [ ] **Step 1: 更新 Tauri 配置**
+
+```json
+// src-tauri/tauri.conf.json
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "ztools",
+  "version": "0.1.0",
+  "identifier": "com.zhouzhaolun.ztools",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "ztools",
+        "width": 1000,
+        "height": 700,
+        "minWidth": 800,
+        "minHeight": 600,
+        "center": true,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}
+```
+
+- [ ] **Step 2: 更新 Vite 配置**
 
 ```typescript
 // vite.config.ts
@@ -1212,6 +1252,9 @@ import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
 import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
 import { resolve } from 'path'
+
+// @ts-expect-error process is a nodejs global
+const host = process.env.TAURI_DEV_HOST
 
 // https://vite.dev/config/
 export default defineConfig(async () => ({
@@ -1253,7 +1296,7 @@ export default defineConfig(async () => ({
 }))
 ```
 
-- [ ] **Step 2: 验证配置**
+- [ ] **Step 3: 验证配置**
 
 ```bash
 npm run build
@@ -1261,11 +1304,11 @@ npm run build
 
 Expected: Build succeeds without errors
 
-- [ ] **Step 3: 提交**
+- [ ] **Step 4: 提交**
 
 ```bash
-git add vite.config.ts
-git commit -m "feat: update Vite config with Element Plus auto-import"
+git add vite.config.ts src-tauri/tauri.conf.json
+git commit -m "feat: configure Tauri window (decorations: false) and Vite with auto-import"
 ```
 
 ---
@@ -1282,13 +1325,11 @@ git commit -m "feat: update Vite config with Element Plus auto-import"
 // src/main.ts
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
-import ElementPlus from 'element-plus'
-import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 import App from './App.vue'
 import router from './router'
 import i18n from './i18n'
-import './styles/variables.css'
+import './styles/global.css'
 
 const app = createApp(App)
 const pinia = createPinia()
@@ -1296,10 +1337,11 @@ const pinia = createPinia()
 app.use(pinia)
 app.use(router)
 app.use(i18n)
-app.use(ElementPlus)
 
 app.mount('#app')
 ```
+
+**注意：** Element Plus 通过 `unplugin-vue-components` 和 `unplugin-auto-import` 按需导入，无需 `app.use(ElementPlus)`。
 
 - [ ] **Step 2: 更新 App.vue**
 
