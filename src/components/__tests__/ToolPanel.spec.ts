@@ -8,9 +8,8 @@ describe('ToolPanel', () => {
       props: { title: 'Input' },
       slots: { default: '<textarea>hello</textarea>' },
       global: {
-        mocks: {
-          $t: (key: string) => key,
-        },
+        mocks: { $t: (key: string) => key },
+        stubs: { 'el-button': { template: '<button><slot /></button>' } },
       },
     })
 
@@ -25,6 +24,7 @@ describe('ToolPanel', () => {
         mocks: {
           $t: (key: string) => key,
         },
+        stubs: { 'el-button': { template: '<button><slot /></button>' } },
       },
     })
 
@@ -38,6 +38,7 @@ describe('ToolPanel', () => {
         mocks: {
           $t: (key: string) => key,
         },
+        stubs: { 'el-button': { template: '<button><slot /></button>' } },
       },
     })
 

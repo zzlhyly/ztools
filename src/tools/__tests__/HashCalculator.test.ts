@@ -3,11 +3,11 @@ import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
-import JsonFormatter from '../JsonFormatter.vue'
+import HashCalculator from '../HashCalculator.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes: [{ path: '/json', component: JsonFormatter }],
+  routes: [{ path: '/hash', component: HashCalculator }],
 })
 
 const i18n = createI18n({
@@ -16,13 +16,15 @@ const i18n = createI18n({
   messages: {
     'en-US': {
       tools: {
-        json: { name: 'JSON Formatter' },
+        hash: { name: 'Hash Calculator' },
       },
       common: {
         input: 'Input',
         output: 'Output',
         format: 'Format',
         minify: 'Minify',
+        encode: 'Encode',
+        decode: 'Decode',
         copy: 'Copy',
         paste: 'Paste',
         clear: 'Clear',
@@ -45,7 +47,6 @@ const i18n = createI18n({
   },
 })
 
-// Mock ElMessage
 vi.mock('element-plus', () => ({
   ElMessage: {
     success: vi.fn(),
@@ -53,10 +54,9 @@ vi.mock('element-plus', () => ({
   },
 }))
 
-describe('JsonFormatter', () => {
+describe('HashCalculator', () => {
   const stubs = {
     'el-button': { template: '<button><slot /></button>' },
-    'el-alert': { template: '<div class="el-alert"><slot /></div>' },
   }
 
   beforeEach(() => {
@@ -64,63 +64,56 @@ describe('JsonFormatter', () => {
   })
 
   it('should render input textarea', () => {
-    const wrapper = mount(JsonFormatter, {
+    const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
     expect(wrapper.find('textarea').exists()).toBe(true)
   })
 
-  it('should format JSON on button click', async () => {
-    const wrapper = mount(JsonFormatter, {
+  it('should calculate SHA-1 hash', async () => {
+    const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
     const textarea = wrapper.find('textarea')
-    await textarea.setValue('{"name":"test","age":18}')
+    await textarea.setValue('Hello World')
 
     const buttons = wrapper.findAll('button')
-    const formatButton = buttons.find(b => b.text().includes('Format'))!
-    await formatButton.trigger('click')
+    const calculateButton = buttons.find(b => b.text().includes('Calculate'))!
+    await calculateButton.trigger('click')
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     const output = wrapper.find('.code-content')
-    expect(output.text()).toContain('"name": "test"')
-    expect(output.text()).toContain('"age": 18')
+    expect(output.text()).toContain('SHA-1')
+    expect(output.text()).toContain('SHA-256')
   })
 
-  it('should show error for invalid JSON', async () => {
-    const wrapper = mount(JsonFormatter, {
+  it('should show all hash algorithms', async () => {
+    const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
     const textarea = wrapper.find('textarea')
-    await textarea.setValue('{invalid}')
+    await textarea.setValue('test')
 
     const buttons = wrapper.findAll('button')
-    const formatButton = buttons.find(b => b.text().includes('Format'))!
-    await formatButton.trigger('click')
+    const calculateButton = buttons.find(b => b.text().includes('Calculate'))!
+    await calculateButton.trigger('click')
 
-    expect(wrapper.find('.el-alert').exists()).toBe(true)
-  })
-
-  it('should minify JSON', async () => {
-    const wrapper = mount(JsonFormatter, {
-      global: { plugins: [router, i18n], stubs },
-    })
-    const textarea = wrapper.find('textarea')
-    await textarea.setValue('{\n  "name": "test",\n  "age": 18\n}')
-
-    const buttons = wrapper.findAll('button')
-    const minifyButton = buttons.find(b => b.text().includes('Minify'))!
-    await minifyButton.trigger('click')
+    await new Promise((resolve) => setTimeout(resolve, 100))
 
     const output = wrapper.find('.code-content')
-    expect(output.text()).toBe('{"name":"test","age":18}')
+    expect(output.text()).toContain('SHA-1')
+    expect(output.text()).toContain('SHA-256')
+    expect(output.text()).toContain('SHA-384')
+    expect(output.text()).toContain('SHA-512')
   })
 
   it('should clear input and output', async () => {
-    const wrapper = mount(JsonFormatter, {
+    const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
     const textarea = wrapper.find('textarea')
-    await textarea.setValue('{"test": true}')
+    await textarea.setValue('test')
 
     const buttons = wrapper.findAll('button')
     const clearButton = buttons.find(b => b.text().includes('Clear'))!

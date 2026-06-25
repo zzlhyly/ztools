@@ -7,9 +7,8 @@ describe('CodeOutput', () => {
     const wrapper = mount(CodeOutput, {
       props: { content: '' },
       global: {
-        mocks: {
-          $t: (key: string) => key,
-        },
+        mocks: { $t: (key: string) => key },
+        stubs: { 'el-alert': { template: '<div class="el-alert"><span>{{ title }}</span></div>', props: ['title'] } },
       },
     })
 
@@ -37,6 +36,7 @@ describe('CodeOutput', () => {
         mocks: {
           $t: (key: string) => key,
         },
+        stubs: { 'el-alert': { template: '<div class="el-alert"><span>{{ title }}</span></div>', props: ['title'] } },
       },
     })
 

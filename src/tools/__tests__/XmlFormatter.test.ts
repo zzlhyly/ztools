@@ -3,11 +3,11 @@ import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
-import JsonFormatter from '../JsonFormatter.vue'
+import XmlFormatter from '../XmlFormatter.vue'
 
 const router = createRouter({
   history: createWebHashHistory(),
-  routes: [{ path: '/json', component: JsonFormatter }],
+  routes: [{ path: '/xml', component: XmlFormatter }],
 })
 
 const i18n = createI18n({
@@ -16,7 +16,7 @@ const i18n = createI18n({
   messages: {
     'en-US': {
       tools: {
-        json: { name: 'JSON Formatter' },
+        xml: { name: 'XML Formatter' },
       },
       common: {
         input: 'Input',
@@ -45,7 +45,6 @@ const i18n = createI18n({
   },
 })
 
-// Mock ElMessage
 vi.mock('element-plus', () => ({
   ElMessage: {
     success: vi.fn(),
@@ -53,7 +52,8 @@ vi.mock('element-plus', () => ({
   },
 }))
 
-describe('JsonFormatter', () => {
+
+describe('XmlFormatter', () => {
   const stubs = {
     'el-button': { template: '<button><slot /></button>' },
     'el-alert': { template: '<div class="el-alert"><slot /></div>' },
@@ -64,67 +64,50 @@ describe('JsonFormatter', () => {
   })
 
   it('should render input textarea', () => {
-    const wrapper = mount(JsonFormatter, {
+    const wrapper = mount(XmlFormatter, {
       global: { plugins: [router, i18n], stubs },
     })
     expect(wrapper.find('textarea').exists()).toBe(true)
   })
 
-  it('should format JSON on button click', async () => {
-    const wrapper = mount(JsonFormatter, {
+  it('should format XML on button click', async () => {
+    const wrapper = mount(XmlFormatter, {
       global: { plugins: [router, i18n], stubs },
     })
     const textarea = wrapper.find('textarea')
-    await textarea.setValue('{"name":"test","age":18}')
+    await textarea.setValue('<root><name>test</name><age>18</age></root>')
 
-    const buttons = wrapper.findAll('button')
-    const formatButton = buttons.find(b => b.text().includes('Format'))!
+    const formatButton = wrapper.find('button')
     await formatButton.trigger('click')
 
     const output = wrapper.find('.code-content')
-    expect(output.text()).toContain('"name": "test"')
-    expect(output.text()).toContain('"age": 18')
+    expect(output.text()).toContain('<root>')
+    expect(output.text()).toContain('<name>test')
+    expect(output.text()).toContain('</name>')
   })
 
-  it('should show error for invalid JSON', async () => {
-    const wrapper = mount(JsonFormatter, {
+  it('should show error for invalid XML', async () => {
+    const wrapper = mount(XmlFormatter, {
       global: { plugins: [router, i18n], stubs },
     })
     const textarea = wrapper.find('textarea')
-    await textarea.setValue('{invalid}')
+    await textarea.setValue('<root><unclosed>')
 
-    const buttons = wrapper.findAll('button')
-    const formatButton = buttons.find(b => b.text().includes('Format'))!
+    const formatButton = wrapper.find('button')
     await formatButton.trigger('click')
 
     expect(wrapper.find('.el-alert').exists()).toBe(true)
   })
 
-  it('should minify JSON', async () => {
-    const wrapper = mount(JsonFormatter, {
-      global: { plugins: [router, i18n], stubs },
-    })
-    const textarea = wrapper.find('textarea')
-    await textarea.setValue('{\n  "name": "test",\n  "age": 18\n}')
-
-    const buttons = wrapper.findAll('button')
-    const minifyButton = buttons.find(b => b.text().includes('Minify'))!
-    await minifyButton.trigger('click')
-
-    const output = wrapper.find('.code-content')
-    expect(output.text()).toBe('{"name":"test","age":18}')
-  })
-
   it('should clear input and output', async () => {
-    const wrapper = mount(JsonFormatter, {
+    const wrapper = mount(XmlFormatter, {
       global: { plugins: [router, i18n], stubs },
     })
     const textarea = wrapper.find('textarea')
-    await textarea.setValue('{"test": true}')
+    await textarea.setValue('<root>test</root>')
 
-    const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
-    await clearButton.trigger('click')
+    const clearButton = wrapper.findAll('button').at(1)
+    await clearButton!.trigger('click')
 
     expect(textarea.element.value).toBe('')
   })
