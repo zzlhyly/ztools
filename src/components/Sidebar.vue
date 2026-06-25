@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
@@ -13,6 +14,7 @@ import {
   Hash,
   ChevronLeft,
   ChevronRight,
+  Search,
 } from 'lucide-vue-next'
 import type { Component } from 'vue'
 
@@ -38,31 +40,112 @@ const tools: ToolItem[] = [
   { path: '/hash', icon: Hash, key: 'hash' },
 ]
 
+const searchQuery = ref('')
+const searchInputRef = ref<{ focus: () => void } | null>(null)
+
+const filteredTools = computed(() => {
+  if (!searchQuery.value.trim()) return tools
+  const query = searchQuery.value.toLowerCase()
+  return tools.filter(tool => {
+    const name = t(`tools.${tool.key}.name`).toLowerCase()
+    const desc = t(`tools.${tool.key}.description`).toLowerCase()
+    return name.includes(query) || desc.includes(query)
+  })
+})
+
+const recentTools = computed(() => {
+  return appStore.recentTools
+    .map(path => tools.find(t => t.path === path))
+    .filter((t): t is ToolItem => !!t)
+    .slice(0, 5)
+})
+
 const isActive = (path: string) => route.path === path
 
 const navigateTo = (path: string) => {
   router.push(path)
   appStore.addRecentTool(path)
 }
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Enter' && filteredTools.value.length > 0) {
+    navigateTo(filteredTools.value[0].path)
+    searchQuery.value = ''
+  }
+}
+
+const focusSearch = (e: KeyboardEvent) => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault()
+    searchInputRef.value?.focus()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener('keydown', focusSearch)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', focusSearch)
+})
 </script>
 
 <template>
   <aside class="sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
-    <nav class="sidebar-nav">
-      <div
-        v-for="tool in tools"
-        :key="tool.path"
-        class="menu-item"
-        :class="{ active: isActive(tool.path) }"
-        :title="t(`tools.${tool.key}.name`)"
-        @click="navigateTo(tool.path)"
+    <div class="sidebar-search">
+      <el-input
+        v-if="!appStore.sidebarCollapsed"
+        ref="searchInputRef"
+        v-model="searchQuery"
+        :placeholder="t('common.search')"
+        clearable
+        @keydown="handleKeydown"
       >
-        <component :is="tool.icon" :size="20" />
-        <span v-if="!appStore.sidebarCollapsed" class="menu-text">
-          {{ t(`tools.${tool.key}.name`) }}
-        </span>
+        <template #prefix>
+          <Search :size="14" />
+        </template>
+      </el-input>
+      <div v-else class="search-collapsed">
+        <Search :size="20" />
       </div>
-    </nav>
+    </div>
+
+    <div class="sidebar-content">
+      <div v-if="recentTools.length > 0 && !appStore.sidebarCollapsed" class="sidebar-section">
+        <div class="section-title">{{ t('common.recent') }}</div>
+        <div
+          v-for="tool in recentTools"
+          :key="`recent-${tool.path}`"
+          class="menu-item"
+          :class="{ active: isActive(tool.path) }"
+          :title="t(`tools.${tool.key}.name`)"
+          @click="navigateTo(tool.path)"
+        >
+          <component :is="tool.icon" :size="18" />
+          <span class="menu-text">{{ t(`tools.${tool.key}.name`) }}</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div v-if="!appStore.sidebarCollapsed" class="section-title">
+          {{ t('common.allTools') }}
+        </div>
+        <div
+          v-for="tool in filteredTools"
+          :key="tool.path"
+          class="menu-item"
+          :class="{ active: isActive(tool.path) }"
+          :title="t(`tools.${tool.key}.name`)"
+          @click="navigateTo(tool.path)"
+        >
+          <component :is="tool.icon" :size="18" />
+          <span v-if="!appStore.sidebarCollapsed" class="menu-text">
+            {{ t(`tools.${tool.key}.name`) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
     <button class="toggle-button" @click="appStore.toggleSidebar()">
       <ChevronLeft v-if="!appStore.sidebarCollapsed" :size="16" />
       <ChevronRight v-else :size="16" />
@@ -75,7 +158,7 @@ const navigateTo = (path: string) => {
   display: flex;
   flex-direction: column;
   width: var(--sidebar-width);
-  background-color: var(--bg-color);
+  background-color: var(--surface-card);
   border-right: 1px solid var(--border-color);
   transition: width 0.3s ease;
 }
@@ -84,10 +167,35 @@ const navigateTo = (path: string) => {
   width: var(--sidebar-collapsed-width);
 }
 
-.sidebar-nav {
+.sidebar-search {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.search-collapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-color-secondary);
+}
+
+.sidebar-content {
   flex: 1;
   padding: var(--spacing-sm);
   overflow-y: auto;
+}
+
+.sidebar-section {
+  margin-bottom: var(--spacing-md);
+}
+
+.section-title {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  color: var(--text-caption);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .menu-item {
@@ -117,6 +225,7 @@ const navigateTo = (path: string) => {
 .menu-text {
   overflow: hidden;
   text-overflow: ellipsis;
+  font-size: var(--font-size-sm);
 }
 
 .toggle-button {

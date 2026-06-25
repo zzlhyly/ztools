@@ -59,6 +59,9 @@ export default {
     error: '错误',
     success: '成功',
     placeholder: '请输入内容...',
+    search: '搜索工具',
+    recent: '最近使用',
+    allTools: '全部工具',
   },
   errors: {
     jsonSyntax: 'JSON 语法错误: {message}',

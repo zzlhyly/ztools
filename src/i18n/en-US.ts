@@ -59,6 +59,9 @@ export default {
     error: 'Error',
     success: 'Success',
     placeholder: 'Enter content...',
+    search: 'Search tools',
+    recent: 'Recent',
+    allTools: 'All tools',
   },
   errors: {
     jsonSyntax: 'JSON syntax error: {message}',
