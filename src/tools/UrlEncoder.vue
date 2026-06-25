@@ -44,7 +44,7 @@ const handleClear = () => {
 <template>
   <ToolLayout :title="t('tools.url.name')" output-copyable @copy="handleCopy">
     <template #input>
-      <ToolTextarea v-model="input" :placeholder="t('common.placeholder')" />
+      <ToolTextarea v-model="input" :placeholder="t('common.placeholder')" submit-hotkey @submit="handleEncode" />
     </template>
 
     <template #actions>

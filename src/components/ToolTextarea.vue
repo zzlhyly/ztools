@@ -3,11 +3,24 @@ const model = defineModel<string>()
 
 interface Props {
   placeholder?: string
+  submitHotkey?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   placeholder: '',
+  submitHotkey: false,
 })
+
+const emit = defineEmits<{
+  submit: []
+}>()
+
+const handleKeydown = (e: KeyboardEvent) => {
+  if (props.submitHotkey && (e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault()
+    emit('submit')
+  }
+}
 </script>
 
 <template>
@@ -15,6 +28,7 @@ const props = withDefaults(defineProps<Props>(), {
     v-model="model"
     class="tool-textarea"
     :placeholder="placeholder"
+    @keydown="handleKeydown"
   />
 </template>
 
