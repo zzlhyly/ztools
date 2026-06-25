@@ -1,43 +1,81 @@
 <script setup lang="ts">
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import ToolPanel from './ToolPanel.vue'
+import ToolActionBar from './ToolActionBar.vue'
 
-const props = withDefaults(defineProps<{
+type LayoutMode = 'split' | 'stacked' | 'auto'
+
+interface Props {
   title: string
   inputLabel?: string
   outputLabel?: string
-}>(), {
+  outputCopyable?: boolean
+  layout?: LayoutMode
+}
+
+const props = withDefaults(defineProps<Props>(), {
   inputLabel: '',
   outputLabel: '',
+  outputCopyable: false,
+  layout: 'auto',
 })
 
+const emit = defineEmits<{
+  copy: []
+}>()
+
 const { t } = useI18n()
+const containerRef = ref<HTMLDivElement | null>(null)
+const containerWidth = ref(1200)
+
+const isStacked = computed(() => {
+  if (props.layout === 'stacked') return true
+  if (props.layout === 'split') return false
+  return containerWidth.value < 900
+})
+
+const updateWidth = () => {
+  if (containerRef.value) {
+    containerWidth.value = containerRef.value.clientWidth
+  }
+}
+
+onMounted(() => {
+  updateWidth()
+  window.addEventListener('resize', updateWidth)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateWidth)
+})
 </script>
 
 <template>
-  <div class="tool-layout">
+  <div ref="containerRef" class="tool-layout">
     <h2 class="tool-title">{{ title }}</h2>
-    <div class="tool-content">
-      <div class="tool-panel input-panel">
-        <div class="panel-header">
-          <span class="panel-label">{{ inputLabel || t('common.input') }}</span>
+
+    <div class="tool-workspace" :class="{ stacked: isStacked }">
+      <ToolPanel :title="inputLabel || t('common.input')">
+        <template #actions>
           <slot name="input-actions" />
-        </div>
-        <div class="panel-body">
-          <slot name="input" />
-        </div>
-      </div>
-      <div class="tool-actions">
-        <slot name="actions" />
-      </div>
-      <div class="tool-panel output-panel">
-        <div class="panel-header">
-          <span class="panel-label">{{ outputLabel || t('common.output') }}</span>
+        </template>
+        <slot name="input" />
+      </ToolPanel>
+
+      <ToolPanel
+        :title="outputLabel || t('common.output')"
+        :copyable="outputCopyable"
+        @copy="emit('copy')"
+      >
+        <template #actions>
           <slot name="output-actions" />
-        </div>
-        <div class="panel-body">
-          <slot name="output" />
-        </div>
-      </div>
+          <ToolActionBar>
+            <slot name="actions" />
+          </ToolActionBar>
+        </template>
+        <slot name="output" />
+      </ToolPanel>
     </div>
   </div>
 </template>
@@ -47,73 +85,31 @@ const { t } = useI18n()
   height: 100%;
   display: flex;
   flex-direction: column;
+  gap: var(--spacing-lg);
 }
 
 .tool-title {
   font-size: var(--font-size-xl);
   font-weight: 600;
-  color: var(--text-color-primary);
-  margin-bottom: var(--spacing-lg);
+  color: var(--text-title);
+  margin: 0;
 }
 
-.tool-content {
+.tool-workspace {
   flex: 1;
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr;
   gap: var(--spacing-md);
   min-height: 0;
 }
 
-@media (max-width: 900px) {
-  .tool-content {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto 1fr;
-  }
+.tool-workspace.stacked {
+  grid-template-columns: 1fr;
+  grid-template-rows: 1fr auto 1fr;
 }
 
-.tool-panel {
-  display: flex;
-  flex-direction: column;
-  background-color: var(--bg-color);
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-sm) var(--spacing-md);
-  background-color: var(--bg-color-page);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.panel-label {
-  font-size: var(--font-size-sm);
-  font-weight: 600;
-  color: var(--text-color-secondary);
-  text-transform: uppercase;
-}
-
-.panel-body {
-  flex: 1;
-  padding: var(--spacing-md);
-  overflow: auto;
-}
-
-.tool-actions {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: var(--spacing-sm);
-  padding: var(--spacing-md) 0;
-}
-
-@media (max-width: 900px) {
-  .tool-actions {
-    flex-direction: row;
-    padding: 0 var(--spacing-md);
-  }
+.tool-workspace > * {
+  min-height: 0;
 }
 </style>
