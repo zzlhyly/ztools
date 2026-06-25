@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAppStore } from '@/stores/app'
 import TitleBar from '@/components/TitleBar.vue'
+import GlobalToolbar from '@/components/GlobalToolbar.vue'
 import Sidebar from '@/components/Sidebar.vue'
 import { useI18n } from 'vue-i18n'
 
@@ -11,6 +12,7 @@ const { t } = useI18n()
 <template>
   <div class="app-container" :class="{ 'sidebar-collapsed': appStore.sidebarCollapsed }">
     <TitleBar :title="t('app.title')" />
+    <GlobalToolbar />
     <div class="app-content">
       <Sidebar />
       <main class="main-content">

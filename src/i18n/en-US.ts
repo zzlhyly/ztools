@@ -1,6 +1,11 @@
 export default {
   app: {
     title: 'ztools',
+    theme: 'Theme',
+    language: 'Language',
+    light: 'Light',
+    dark: 'Dark',
+    system: 'System',
   },
   tools: {
     json: {

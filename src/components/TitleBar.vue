@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { Minus, X, Maximize2 } from 'lucide-vue-next'
+import { Minus, X, Maximize2, Wrench } from 'lucide-vue-next'
 import { minimizeWindow, maximizeWindow, closeWindow } from '@/utils/window'
 
 const props = withDefaults(defineProps<{
@@ -18,8 +18,9 @@ onMounted(() => {
 
 <template>
   <div data-tauri-drag-region class="titlebar" :class="{ 'is-mac': isMac }">
-    <div class="titlebar-title" :style="{ paddingLeft: isMac ? '70px' : '16px' }">
-      🔧 {{ title }}
+    <div class="titlebar-brand" :style="{ paddingLeft: isMac ? '70px' : '16px' }">
+      <Wrench :size="14" class="brand-icon" />
+      <span class="titlebar-title">{{ title }}</span>
     </div>
     <div v-if="!isMac" class="titlebar-controls">
       <button class="titlebar-button" @click="minimizeWindow">
@@ -41,16 +42,26 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   height: var(--titlebar-height);
-  background-color: var(--bg-color);
+  background-color: var(--surface-card);
   border-bottom: 1px solid var(--border-color);
   user-select: none;
   -webkit-user-select: none;
 }
 
+.titlebar-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.brand-icon {
+  color: var(--color-primary);
+}
+
 .titlebar-title {
   font-size: var(--font-size-sm);
   font-weight: 600;
-  color: var(--text-color-primary);
+  color: var(--text-title);
 }
 
 .titlebar-controls {
