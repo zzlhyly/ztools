@@ -193,10 +193,9 @@ async fn hash_file(path: String) -> Result<HashResults, String> {
         use sha1::{Sha1, Digest};
         use sha2::{Sha256, Sha384, Sha512};
 
-        let file = std::fs::File::open(&path)
+        let mut file = std::fs::File::open(&path)
             .map_err(|e| format!("Failed to open file: {}", e))?;
-        let mut reader = std::io::BufReader::new(file);
-        let mut buffer = [0u8; 65536];
+        let mut buffer = vec![0u8; 1_048_576]; // 1MB heap buffer
 
         let mut sha1_hasher = Sha1::new();
         let mut sha256_hasher = Sha256::new();
@@ -204,7 +203,7 @@ async fn hash_file(path: String) -> Result<HashResults, String> {
         let mut sha512_hasher = Sha512::new();
 
         loop {
-            let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
+            let n = file.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
             if n == 0 { break; }
             let chunk = &buffer[..n];
             sha1_hasher.update(chunk);
