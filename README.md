@@ -13,7 +13,12 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - **Timestamp Converter** - Convert between timestamps and dates
 - **Regex Tester** - Test regular expressions with flags support
 - **Color Converter** - Convert between HEX, RGB, and HSL colors
-- **Hash Calculator** - Calculate SHA-1, SHA-256, SHA-384, SHA-512 hashes
+- **Hash Calculator** - Calculate MD5, SHA-1, SHA-256, SHA-384, SHA-512, SHA3 hashes (file hashing via Rust backend)
+- **AES Encrypt/Decrypt** - AES symmetric encryption with CBC/CTR/GCM modes and multiple paddings
+- **RSA Key Generator** - Generate RSA public/private key pairs (1024/2048/4096 bit)
+- **RSA Encrypt/Decrypt** - RSA encryption, decryption, signing, and verification
+- **HMAC Calculator** - Compute HMAC message authentication codes (SHA-1/256/384/512)
+- **UUID Generator** - Generate UUID v4 identifiers in batch
 - **M3U8 Downloader** - Download M3U8 videos and convert to MP4 with AES-128 decryption support
 
 ## Tech Stack
@@ -83,6 +88,11 @@ ztools/
 │   │   ├── RegexTester.vue
 │   │   ├── ColorConverter.vue
 │   │   ├── HashCalculator.vue
+│   │   ├── AesTool.vue
+│   │   ├── HmacTool.vue
+│   │   ├── RsaKeyGen.vue
+│   │   ├── RsaCrypto.vue
+│   │   ├── UuidTool.vue
 │   │   └── M3u8Downloader.vue
 │   ├── stores/              # Pinia stores
 │   ├── router/              # Vue Router

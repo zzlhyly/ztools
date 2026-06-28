@@ -13,7 +13,12 @@
 - **时间戳转换** - 时间戳与日期时间互转
 - **正则表达式测试** - 支持 g/i/m 标志的正则表达式测试
 - **颜色转换** - HEX、RGB、HSL 颜色格式互转
-- **哈希计算** - SHA-1、SHA-256、SHA-384、SHA-512 哈希计算
+- **哈希计算** - MD5、SHA-1、SHA-256、SHA-384、SHA-512、SHA3 哈希计算（文件哈希通过 Rust 后端流式处理）
+- **AES 加解密** - AES 对称加密，支持 CBC/CTR/GCM 模式和多种填充方式
+- **RSA 密钥生成** - 生成 RSA 公私钥对（1024/2048/4096 位）
+- **RSA 加解密** - RSA 公钥加密、私钥解密、签名与验签
+- **HMAC 计算** - HMAC 消息认证码计算（SHA-1/256/384/512）
+- **UUID 生成** - 批量生成 UUID v4 标识符
 - **M3U8 下载器** - 下载 M3U8 视频并转换为 MP4，支持 AES-128 解密
 
 ## 技术栈
@@ -83,6 +88,11 @@ ztools/
 │   │   ├── RegexTester.vue
 │   │   ├── ColorConverter.vue
 │   │   ├── HashCalculator.vue
+│   │   ├── AesTool.vue
+│   │   ├── HmacTool.vue
+│   │   ├── RsaKeyGen.vue
+│   │   ├── RsaCrypto.vue
+│   │   ├── UuidTool.vue
 │   │   └── M3u8Downloader.vue
 │   ├── stores/              # Pinia 状态管理
 │   ├── router/              # Vue Router 路由

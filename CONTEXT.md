@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-ztools 是一个面向开发者的桌面工具箱应用，提供常用开发工具（JSON/XML 格式化、Base64 编解码、哈希计算等）。基于 Tauri v2（Rust）+ Vue 3（TypeScript）+ Element Plus 构建，支持 Windows/macOS/Linux。
+ztools 是一个面向开发者的桌面工具箱应用，提供 14 种开发工具（JSON/XML 格式化、Base64/URL 编解码、哈希计算、AES/RSA 加解密、HMAC、UUID 生成等）。基于 Tauri v2（Rust）+ Vue 3（TypeScript）+ Element Plus 构建，支持 Windows/macOS/Linux。
 
 ## 技术栈
 
@@ -31,7 +31,7 @@ ztools/
 │   ├── router/index.ts        # Hash 路由
 │   ├── stores/app.ts          # Pinia store (主题/语言/侧栏/最近使用)
 │   ├── i18n/                  # 国际化 (zh-CN.ts, en-US.ts)
-│   ├── utils/                 # 工具函数 (clipboard, hash, formatters, window)
+│   ├── utils/                 # 工具函数 (clipboard, hash, crypto, formatters, window)
 │   └── styles/                # CSS 变量和全局样式
 ├── src-tauri/                 # Tauri 后端 (Rust)
 │   ├── src/lib.rs             # Tauri 命令
@@ -68,9 +68,10 @@ ztools/
 - **构建**：`npm run tauri build` 会自动先运行 `vue-tsc --noEmit` 做类型检查
 - **CSP**：null（允许所有内容）
 - **不能单独 `npm run dev`**：只启动 Vite，没有 Rust 后端
+- **加密操作**：所有加解密使用 Web Crypto API（浏览器沙箱），密钥不离开前端。文件哈希使用 Rust 后端（ring crate + SHA-NI 硬件加速）
 
 ## 已知问题 / 待优化
 
 - LSP 报错 `vite.config.ts`/`vitest.config.ts` 缺少 `@types/node`（不影响实际构建）
-- Rust 后端目前仅有一个 greeting 命令，大部分功能纯前端实现
+- Rust `hash_file` 命令已重构为单算法模式（支持 SHA-1/256/384/512），移除了旧的多线程 4 算法并行设计
 - 无 CI/CD 配置

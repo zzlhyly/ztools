@@ -15,7 +15,7 @@ npx vitest path/to/file   # run one test file
 ## Architecture
 
 - **Frontend**: `src/` — Vue 3 SFC with `<script setup lang="ts">`, Pinia stores, vue-i18n (zh-CN/en-US), vue-router (hash mode)
-- **Backend**: `src-tauri/src/lib.rs` — Tauri commands, currently minimal
+- **Backend**: `src-tauri/src/lib.rs` — Tauri commands: `hash_file`, M3U8 downloader, HTTP fetch
 - **Entry**: `src/main.ts` → App.vue → TitleBar / GlobalToolbar / Sidebar / `<router-view>`
 - **Routing**: `src/router/index.ts` — hash-based, one route per tool
 - **State**: `src/stores/app.ts` — theme, locale, sidebar, recentTools (persisted to localStorage)
