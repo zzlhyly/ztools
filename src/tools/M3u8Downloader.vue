@@ -388,15 +388,27 @@ onUnmounted(() => {
           </thead>
           <tbody>
             <tr>
-              <td><el-input :model-value="store.config.headers.referer" placeholder="Referer" size="small"
-                @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, referer: v } })" /></td>
-              <td><span class="header-value-preview">{{ store.config.headers.referer || '—' }}</span></td>
+              <td><span class="header-key-label">Referer</span></td>
+              <td>
+                <el-input
+                  :model-value="store.config.headers.referer"
+                  placeholder="https://example.com/"
+                  size="small"
+                  @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, referer: v } })"
+                />
+              </td>
               <td></td>
             </tr>
             <tr>
-              <td><el-input :model-value="store.config.headers.cookie" placeholder="Cookie" size="small"
-                @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, cookie: v } })" /></td>
-              <td><span class="header-value-preview">{{ store.config.headers.cookie ? '••••••' : '—' }}</span></td>
+              <td><span class="header-key-label">Cookie</span></td>
+              <td>
+                <el-input
+                  :model-value="store.config.headers.cookie"
+                  placeholder="session=abc123"
+                  size="small"
+                  @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, cookie: v } })"
+                />
+              </td>
               <td></td>
             </tr>
             <tr v-for="(item, index) in store.config.headers.custom" :key="index">
@@ -608,15 +620,17 @@ onUnmounted(() => {
 
 .path-input-row .el-input { flex: 1; }
 
-.header-value-preview {
+.header-key-label {
   font-size: var(--font-size-xs, 12px);
-  color: var(--text-color-placeholder, #c0c4cc);
+  font-weight: 600;
+  color: var(--text-color-regular, #606266);
   padding: 0 8px;
 }
 
 .config-row {
   display: flex;
-  gap: var(--spacing-md, 16px);
+  flex-direction: column;
+  gap: var(--spacing-sm, 8px);
 }
 
 .config-item {
