@@ -284,3 +284,71 @@ export function getRsaMaxPayload(modulusLength: number, padding: string): number
   const hashBytes = padding.includes('SHA-512') ? 64 : padding.includes('SHA-256') ? 32 : padding.includes('SHA-1') ? 20 : 32
   return keyBytes - 2 * hashBytes - 2
 }
+
+const PEM_RSA_PRIVATE_HEADER = '-----BEGIN RSA PRIVATE KEY-----'
+const PEM_RSA_PRIVATE_FOOTER = '-----END RSA PRIVATE KEY-----'
+
+function getOaepHash(padding: string): string {
+  if (padding.includes('SHA-512')) return 'SHA-512'
+  if (padding.includes('SHA-256')) return 'SHA-256'
+  if (padding.includes('SHA-1')) return 'SHA-1'
+  return 'SHA-256'
+}
+
+export async function rsaEncrypt(data: string, publicKeyPem: string, padding: string): Promise<string> {
+  const der = validatePem(publicKeyPem, PEM_PUBLIC_HEADER, PEM_PUBLIC_FOOTER)
+  const hash = getOaepHash(padding)
+  const key = await crypto.subtle.importKey('spki', der, { name: 'RSA-OAEP', hash }, false, ['encrypt'])
+  const dataBytes = new TextEncoder().encode(data)
+  const maxBytes = getRsaMaxPayload((key.algorithm as any).modulusLength || 2048, padding)
+  if (dataBytes.length > maxBytes) {
+    throw new CryptoError(`Input exceeds ${maxBytes} byte limit (${(key.algorithm as any).modulusLength}-bit, ${padding})`)
+  }
+  try {
+    const cipherBuf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, dataBytes.buffer)
+    return arrayBufferToBase64(cipherBuf)
+  } catch (e: any) { throw new CryptoError(`Encryption failed: check key and padding compatibility`) }
+}
+
+export async function rsaDecrypt(cipherB64: string, privateKeyPem: string, padding: string): Promise<string> {
+  const der = validatePem(privateKeyPem, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER)
+  const hash = getOaepHash(padding)
+  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSA-OAEP', hash }, false, ['decrypt'])
+  const cipherData = base64ToArrayBuffer(cipherB64)
+  try {
+    const plainBuf = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, cipherData)
+    return new TextDecoder().decode(plainBuf)
+  } catch (e: any) { throw new CryptoError(`Decryption failed: private key mismatch or corrupted ciphertext`) }
+}
+
+export async function rsaSign(data: string, privateKeyPem: string, padding: string): Promise<string> {
+  const t = privateKeyPem.trim()
+  let der: ArrayBuffer; let format: 'pkcs8' | 'pkcs1'
+  if (t.includes(PEM_PRIVATE_HEADER)) { der = validatePem(t, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER); format = 'pkcs8' }
+  else if (t.includes(PEM_RSA_PRIVATE_HEADER)) { der = validatePem(t, PEM_RSA_PRIVATE_HEADER, PEM_RSA_PRIVATE_FOOTER); format = 'pkcs1' }
+  else { throw new CryptoError('Key format error: expected PRIVATE KEY PEM') }
+  const isPss = padding.startsWith('PSS')
+  const hashName = padding.includes('SHA-512') ? 'SHA-512' : padding.includes('SHA-256') ? 'SHA-256' : 'SHA-1'
+  const algorithm: any = isPss ? { name: 'RSA-PSS', hash: hashName, saltLength: 32 } : { name: 'RSASSA-PKCS1-v1_5', hash: hashName }
+  let key: CryptoKey
+  try { key = await crypto.subtle.importKey(format as any, der, algorithm, false, ['sign']) }
+  catch (e: any) { throw new CryptoError(`Key import failed: ${e.message}`) }
+  try {
+    const sigBuf = await crypto.subtle.sign(algorithm, key, new TextEncoder().encode(data))
+    return arrayBufferToBase64(sigBuf)
+  } catch (e: any) { throw new CryptoError(`Signing failed: invalid private key`) }
+}
+
+export async function rsaVerify(signatureB64: string, data: string, publicKeyPem: string, padding: string): Promise<boolean> {
+  const der = validatePem(publicKeyPem, PEM_PUBLIC_HEADER, PEM_PUBLIC_FOOTER)
+  const isPss = padding.startsWith('PSS')
+  const hashName = padding.includes('SHA-512') ? 'SHA-512' : padding.includes('SHA-256') ? 'SHA-256' : 'SHA-1'
+  const algorithm: any = isPss ? { name: 'RSA-PSS', hash: hashName, saltLength: 32 } : { name: 'RSASSA-PKCS1-v1_5', hash: hashName }
+  let key: CryptoKey
+  try { key = await crypto.subtle.importKey('spki', der, algorithm, false, ['verify']) }
+  catch { throw new CryptoError('Key import failed: invalid public key') }
+  try {
+    const sigBytes = base64ToArrayBuffer(signatureB64)
+    return await crypto.subtle.verify(algorithm, key, sigBytes, new TextEncoder().encode(data))
+  } catch (e: any) { throw new CryptoError(`Verification failed: ${e.message}`) }
+}

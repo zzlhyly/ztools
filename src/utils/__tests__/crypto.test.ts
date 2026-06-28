@@ -6,6 +6,7 @@ import {
   parseKeyBytes, padPKCS7, unpadPKCS7, padZero, unpadZero,
   generateAesKey, generateAesIv, aesEncrypt, aesDecrypt,
   generateRsaKeyPair, importRsaPublicKey, importRsaPrivateKey, getRsaMaxPayload,
+  rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify,
 } from '../crypto'
 
 describe('CryptoError', () => {
@@ -311,5 +312,77 @@ describe('getRsaMaxPayload', () => {
   })
   it('scales with key size', () => {
     expect(getRsaMaxPayload(4096,'PKCS#1 v1.5')).toBeGreaterThan(getRsaMaxPayload(2048,'PKCS#1 v1.5'))
+  })
+})
+
+describe('rsaEncrypt + rsaDecrypt', () => {
+  let pubPem: string; let privPem: string
+  beforeAll(async () => {
+    const k = await generateRsaKeyPair(2048)
+    pubPem = k.publicKey; privPem = k.privateKey
+  })
+  it('roundtrip OAEP-SHA256', async () => {
+    expect(await rsaDecrypt(await rsaEncrypt('Hello RSA!', pubPem, 'OAEP-SHA256'), privPem, 'OAEP-SHA256')).toBe('Hello RSA!')
+  })
+  it('roundtrip PKCS#1 v1.5', async () => {
+    expect(await rsaDecrypt(await rsaEncrypt('PKCS1 test', pubPem, 'PKCS#1 v1.5'), privPem, 'PKCS#1 v1.5')).toBe('PKCS1 test')
+  })
+  it('empty string roundtrip', async () => {
+    expect(await rsaDecrypt(await rsaEncrypt('', pubPem, 'OAEP-SHA256'), privPem, 'OAEP-SHA256')).toBe('')
+  })
+  it('OAEP produces different ciphertexts', async () => {
+    const c1 = await rsaEncrypt('test', pubPem, 'OAEP-SHA256')
+    const c2 = await rsaEncrypt('test', pubPem, 'OAEP-SHA256')
+    expect(c1).not.toBe(c2)
+  })
+  it('throws when data exceeds max payload', async () => {
+    await expect(rsaEncrypt('x'.repeat(200), pubPem, 'OAEP-SHA256')).rejects.toThrow()
+  })
+  it('decrypt with wrong key throws', async () => {
+    const k2 = await generateRsaKeyPair(2048)
+    const c = await rsaEncrypt('secret', pubPem, 'OAEP-SHA256')
+    await expect(rsaDecrypt(c, k2.privateKey, 'OAEP-SHA256')).rejects.toThrow(/Decryption failed/)
+  })
+})
+
+describe('rsaSign + rsaVerify', () => {
+  let pubPem: string; let privPem: string
+  beforeAll(async () => {
+    const k = await generateRsaKeyPair(2048)
+    pubPem = k.publicKey; privPem = k.privateKey
+  })
+  it('sign+verify PSS-SHA256', async () => {
+    const sig = await rsaSign('Sign this', privPem, 'PSS-SHA256')
+    expect(await rsaVerify(sig, 'Sign this', pubPem, 'PSS-SHA256')).toBe(true)
+  })
+  it('sign+verify PKCS#1 v1.5', async () => {
+    const sig = await rsaSign('PKCS1 sign', privPem, 'PKCS#1 v1.5')
+    expect(await rsaVerify(sig, 'PKCS1 sign', pubPem, 'PKCS#1 v1.5')).toBe(true)
+  })
+  it('wrong data -> verify false', async () => {
+    const sig = await rsaSign('original', privPem, 'PSS-SHA256')
+    expect(await rsaVerify(sig, 'tampered', pubPem, 'PSS-SHA256')).toBe(false)
+  })
+  it('different key -> verify false', async () => {
+    const k2 = await generateRsaKeyPair(2048)
+    const sig = await rsaSign('test', k2.privateKey, 'PSS-SHA256')
+    expect(await rsaVerify(sig, 'test', pubPem, 'PSS-SHA256')).toBe(false)
+  })
+  it('empty string sign+verify', async () => {
+    const sig = await rsaSign('', privPem, 'PSS-SHA256')
+    expect(await rsaVerify(sig, '', pubPem, 'PSS-SHA256')).toBe(true)
+  })
+  it('PSS produces different signatures', async () => {
+    expect(await rsaSign('test', privPem, 'PSS-SHA256')).not.toBe(await rsaSign('test', privPem, 'PSS-SHA256'))
+  })
+})
+
+describe('RSA key dual-use', () => {
+  it('same key pair: encrypt+decrypt AND sign+verify', async () => {
+    const k = await generateRsaKeyPair(2048)
+    const c = await rsaEncrypt('dual', k.publicKey, 'OAEP-SHA256')
+    expect(await rsaDecrypt(c, k.privateKey, 'OAEP-SHA256')).toBe('dual')
+    const s = await rsaSign('sign', k.privateKey, 'PSS-SHA256')
+    expect(await rsaVerify(s, 'sign', k.publicKey, 'PSS-SHA256')).toBe(true)
   })
 })
