@@ -151,3 +151,4 @@ const handleClear = () => {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
 }
+</style>

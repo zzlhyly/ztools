@@ -134,3 +134,4 @@ const handleClear = () => {
   outline: none;
   border-color: var(--color-primary);
 }
+</style>

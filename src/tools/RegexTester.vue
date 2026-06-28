@@ -92,7 +92,6 @@ const handleClear = () => {
   display: flex;
   flex-direction: column;
   gap: var(--spacing-md);
-  height: 100%;
 }
 
 .form-group {
@@ -141,3 +140,4 @@ const handleClear = () => {
   outline: none;
   border-color: var(--color-primary);
 }
+</style>

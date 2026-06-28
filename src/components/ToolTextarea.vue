@@ -35,8 +35,7 @@ const handleKeydown = (e: KeyboardEvent) => {
 <style scoped>
 .tool-textarea {
   width: 100%;
-  height: 100%;
-  min-height: 200px;
+  min-height: 300px;
   padding: var(--spacing-md);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);

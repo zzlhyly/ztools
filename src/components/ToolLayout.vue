@@ -18,7 +18,7 @@ const props = withDefaults(defineProps<Props>(), {
   inputLabel: '',
   outputLabel: '',
   outputCopyable: false,
-  layout: 'auto',
+  layout: 'stacked',
 })
 
 const emit = defineEmits<{
@@ -82,7 +82,8 @@ onUnmounted(() => {
 
 <style scoped>
 .tool-layout {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   gap: var(--spacing-lg);
@@ -106,7 +107,7 @@ onUnmounted(() => {
 
 .tool-workspace.stacked {
   grid-template-columns: 1fr;
-  grid-template-rows: 1fr auto 1fr;
+  grid-template-rows: auto 1fr;
 }
 
 .tool-workspace > * {

@@ -31,11 +31,13 @@ const props = withDefaults(defineProps<Props>(), {
 
 <style scoped>
 .code-output {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
 }
 
 .code-content {
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   padding: var(--spacing-md);
   background-color: var(--bg-color-page);
   border-radius: var(--radius-md);
@@ -55,7 +57,8 @@ const props = withDefaults(defineProps<Props>(), {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
+  flex: 1;
+  min-height: 0;
   color: var(--text-color-placeholder);
   font-size: var(--font-size-sm);
 }
