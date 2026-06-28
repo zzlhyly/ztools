@@ -220,17 +220,17 @@ describe('aesEncrypt + aesDecrypt (real crypto.subtle)', () => {
   it('decrypt with wrong key throws', async () => {
     const wrongKey = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'
     const c = await aesEncrypt('secret', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
-    await expect(aesDecrypt(c, wrongKey, ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/解密失败/)
+    await expect(aesDecrypt(c, wrongKey, ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/Decryption failed/)
   })
   it('decrypt with wrong IV throws', async () => {
     const c = await aesEncrypt('secret', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
-    await expect(aesDecrypt(c, keyHex256, 'ffffffffffffffffffffffffffffffff', 'CBC', 256, 'PKCS7')).rejects.toThrow(/解密失败/)
+    await expect(aesDecrypt(c, keyHex256, 'ffffffffffffffffffffffffffffffff', 'CBC', 256, 'PKCS7')).rejects.toThrow(/Decryption failed/)
   })
   it('reject short key', async () => {
-    await expect(aesEncrypt('test', 'dead', ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/密钥/)
+    await expect(aesEncrypt('test', 'dead', ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/Key length/)
   })
   it('reject short IV for CBC', async () => {
-    await expect(aesEncrypt('test', keyHex256, '0001', 'CBC', 256, 'PKCS7')).rejects.toThrow(/IV/)
+    await expect(aesEncrypt('test', keyHex256, '0001', 'CBC', 256, 'PKCS7')).rejects.toThrow(/IV length/)
   })
   it('generateAesKey produces usable 256-bit key', async () => {
     const gk = await generateAesKey(256)

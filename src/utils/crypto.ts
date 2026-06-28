@@ -139,11 +139,11 @@ export async function aesEncrypt(
   const keyBytes = hexToArrayBuffer(keyHex)
   const expectedLen = bitLength / 8
   if (keyBytes.byteLength !== expectedLen) {
-    throw new CryptoError(`密钥长度错误: 期望 ${expectedLen} 字节, 实际 ${keyBytes.byteLength} 字节`)
+    throw new CryptoError(`Key length error: expected ${expectedLen} bytes, got ${keyBytes.byteLength}`)
   }
   // Validate IV
   if (ivHex.length !== 32) {
-    throw new CryptoError(`IV长度错误: 期望 16 字节, 实际 ${ivHex.length/2}`)
+    throw new CryptoError(`IV length error: expected 16 bytes, got ${ivHex.length/2}`)
   }
   const ivBuf = hexToArrayBuffer(ivHex)
   // Build algorithm params
@@ -174,7 +174,7 @@ export async function aesEncrypt(
     const cipherBuffer = await crypto.subtle.encrypt(algoParams, key, data)
     return arrayBufferToBase64(cipherBuffer)
   } catch (e: any) {
-    throw new CryptoError(`加密失败: ${e.message || '未知错误'}`)
+    throw new CryptoError(`Encryption failed: ${e.message || 'unknown error'}`)
   }
 }
 
@@ -185,11 +185,11 @@ export async function aesDecrypt(
   const keyBytes = hexToArrayBuffer(keyHex)
   const expectedLen = bitLength / 8
   if (keyBytes.byteLength !== expectedLen) {
-    throw new CryptoError(`密钥长度错误: 期望 ${expectedLen} 字节, 实际 ${keyBytes.byteLength} 字节`)
+    throw new CryptoError(`Key length error: expected ${expectedLen} bytes, got ${keyBytes.byteLength}`)
   }
-  let ivBuf: ArrayBuffer | null = null
+  let ivBuf: ArrayBuffer
   if (ivHex.length !== 32) {
-    throw new CryptoError(`IV长度错误: 期望 16 字节, 实际 ${ivHex.length/2}`)
+    throw new CryptoError(`IV length error: expected 16 bytes, got ${ivHex.length/2}`)
   }
   ivBuf = hexToArrayBuffer(ivHex)
   const algoParams: any = { name: `AES-${mode}` }
@@ -215,6 +215,6 @@ export async function aesDecrypt(
     }
     return new TextDecoder().decode(unpadPKCS7(bytes, 16))
   } catch (e: any) {
-    throw new CryptoError(`解密失败: 密钥/IV 不匹配或密文损坏`)
+    throw new CryptoError(`Decryption failed: key/IV mismatch or corrupted data`)
   }
 }
