@@ -111,3 +111,110 @@ export function unpadZero(data: Uint8Array): Uint8Array {
   while (end > 0 && data[end - 1] === 0) end--
   return data.slice(0, end)
 }
+
+// ============================================================
+// AES
+// ============================================================
+
+export async function generateAesKey(bitLength: 128 | 192 | 256): Promise<string> {
+  const key = await crypto.subtle.generateKey(
+    { name: 'AES-CBC', length: bitLength }, true, ['encrypt', 'decrypt'])
+  const exported = await crypto.subtle.exportKey('raw', key)
+  return arrayBufferToHex(exported)
+}
+
+export function generateAesIv(): string {
+  const iv = new Uint8Array(16)
+  crypto.getRandomValues(iv)
+  return arrayBufferToHex(iv.buffer)
+}
+
+const MODES_WITHOUT_WEB_PADDING = ['GCM', 'CTR']
+
+export async function aesEncrypt(
+  plaintext: string, keyHex: string, ivHex: string,
+  mode: string, bitLength: 128 | 192 | 256, padding: string,
+): Promise<string> {
+  // Validate key length
+  const keyBytes = hexToArrayBuffer(keyHex)
+  const expectedLen = bitLength / 8
+  if (keyBytes.byteLength !== expectedLen) {
+    throw new CryptoError(`密钥长度错误: 期望 ${expectedLen} 字节, 实际 ${keyBytes.byteLength} 字节`)
+  }
+  // Validate IV
+  if (ivHex.length !== 32) {
+    throw new CryptoError(`IV长度错误: 期望 16 字节, 实际 ${ivHex.length/2}`)
+  }
+  const ivBuf = hexToArrayBuffer(ivHex)
+  // Build algorithm params
+  const algoParams: any = { name: `AES-${mode}` }
+  if (mode === 'CTR') {
+    algoParams.counter = ivBuf
+    algoParams.length = 64
+  } else if (mode === 'GCM') {
+    algoParams.iv = ivBuf
+    algoParams.tagLength = 128
+  } else {
+    algoParams.iv = ivBuf
+  }
+  // Import key
+  const key = await crypto.subtle.importKey('raw', keyBytes, algoParams.name, false, ['encrypt'])
+  // Prepare plaintext with padding
+  const raw = new TextEncoder().encode(plaintext)
+  let data: ArrayBuffer
+  if (MODES_WITHOUT_WEB_PADDING.includes(mode) || padding === 'NoPadding') {
+    data = raw.buffer
+  } else if (padding === 'ZeroPadding') {
+    data = padZero(raw, 16).buffer
+  } else {
+    // PKCS7, ISO10126, ANSI X.923 -> use PKCS7
+    data = padPKCS7(raw, 16).buffer
+  }
+  try {
+    const cipherBuffer = await crypto.subtle.encrypt(algoParams, key, data)
+    return arrayBufferToBase64(cipherBuffer)
+  } catch (e: any) {
+    throw new CryptoError(`加密失败: ${e.message || '未知错误'}`)
+  }
+}
+
+export async function aesDecrypt(
+  input: string, keyHex: string, ivHex: string,
+  mode: string, bitLength: 128 | 192 | 256, padding: string,
+): Promise<string> {
+  const keyBytes = hexToArrayBuffer(keyHex)
+  const expectedLen = bitLength / 8
+  if (keyBytes.byteLength !== expectedLen) {
+    throw new CryptoError(`密钥长度错误: 期望 ${expectedLen} 字节, 实际 ${keyBytes.byteLength} 字节`)
+  }
+  let ivBuf: ArrayBuffer | null = null
+  if (ivHex.length !== 32) {
+    throw new CryptoError(`IV长度错误: 期望 16 字节, 实际 ${ivHex.length/2}`)
+  }
+  ivBuf = hexToArrayBuffer(ivHex)
+  const algoParams: any = { name: `AES-${mode}` }
+  if (mode === 'CTR') {
+    algoParams.counter = ivBuf
+    algoParams.length = 64
+  } else if (mode === 'GCM') {
+    algoParams.iv = ivBuf
+    algoParams.tagLength = 128
+  } else {
+    algoParams.iv = ivBuf
+  }
+  const key = await crypto.subtle.importKey('raw', keyBytes, algoParams.name, false, ['decrypt'])
+  const cipherData = base64ToArrayBuffer(input)
+  try {
+    const plainBuffer = await crypto.subtle.decrypt(algoParams, key, cipherData)
+    const bytes = new Uint8Array(plainBuffer)
+    if (MODES_WITHOUT_WEB_PADDING.includes(mode) || padding === 'NoPadding') {
+      return new TextDecoder().decode(bytes)
+    }
+    if (padding === 'ZeroPadding') {
+      return new TextDecoder().decode(unpadZero(bytes))
+    }
+    return new TextDecoder().decode(unpadPKCS7(bytes, 16))
+  } catch (e: any) {
+    throw new CryptoError(`解密失败: 密钥/IV 不匹配或密文损坏`)
+  }
+}

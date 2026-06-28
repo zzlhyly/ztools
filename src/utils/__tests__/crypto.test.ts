@@ -4,6 +4,7 @@ import {
   CryptoError, arrayBufferToBase64, base64ToArrayBuffer,
   arrayBufferToHex, hexToArrayBuffer, detectKeyFormat,
   parseKeyBytes, padPKCS7, unpadPKCS7, padZero, unpadZero,
+  generateAesKey, generateAesIv, aesEncrypt, aesDecrypt,
 } from '../crypto'
 
 describe('CryptoError', () => {
@@ -166,5 +167,75 @@ describe('padZero / unpadZero', () => {
     expect(Array.from(result)).toEqual(Array.from(data))
     // Must be a different ArrayBuffer (safe copy)
     expect(result.buffer).not.toBe(data.buffer)
+  })
+})
+
+describe('generateAesIv', () => {
+  it('returns 32-char hex (16 bytes)', () => {
+    const iv = generateAesIv()
+    expect(iv).toHaveLength(32)
+    expect(/^[0-9a-f]{32}$/.test(iv)).toBe(true)
+  })
+  it('generates unique values', () => {
+    expect(generateAesIv()).not.toBe(generateAesIv())
+  })
+})
+
+describe('aesEncrypt + aesDecrypt (real crypto.subtle)', () => {
+  const keyHex256='603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4'
+  const keyHex128='2b7e151628aed2a6abf7158809cf4f3c'
+  const keyHex192='8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b'
+  const ivHex='000102030405060708090a0b0c0d0e0f'
+
+  it('encrypt + decrypt AES-256-CBC PKCS7 roundtrip', async () => {
+    const c = await aesEncrypt('Hello World', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
+    expect(typeof c).toBe('string')
+    expect(await aesDecrypt(c, keyHex256, ivHex, 'CBC', 256, 'PKCS7')).toBe('Hello World')
+  })
+  it('empty string roundtrip', async () => {
+    const c = await aesEncrypt('', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
+    expect(await aesDecrypt(c, keyHex256, ivHex, 'CBC', 256, 'PKCS7')).toBe('')
+  })
+  it('unicode roundtrip', async () => {
+    const c = await aesEncrypt('\u4f60\u597d\u4e16\u754c\ud83c\udf0d', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
+    expect(await aesDecrypt(c, keyHex256, ivHex, 'CBC', 256, 'PKCS7')).toBe('\u4f60\u597d\u4e16\u754c\ud83c\udf0d')
+  })
+  it('AES-128 roundtrip', async () => {
+    const c = await aesEncrypt('test', keyHex128, ivHex, 'CBC', 128, 'PKCS7')
+    expect(await aesDecrypt(c, keyHex128, ivHex, 'CBC', 128, 'PKCS7')).toBe('test')
+  })
+  it('AES-192 roundtrip', async () => {
+    const c = await aesEncrypt('test', keyHex192, ivHex, 'CBC', 192, 'PKCS7')
+    expect(await aesDecrypt(c, keyHex192, ivHex, 'CBC', 192, 'PKCS7')).toBe('test')
+  })
+  it('CTR mode roundtrip', async () => {
+    const ivCtr = 'f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff'
+    const c = await aesEncrypt('CTR mode test', keyHex256, ivCtr, 'CTR', 256, 'NoPadding')
+    expect(await aesDecrypt(c, keyHex256, ivCtr, 'CTR', 256, 'NoPadding')).toBe('CTR mode test')
+  })
+  it('GCM mode roundtrip (ciphertext+tag auto-handled)', async () => {
+    const c = await aesEncrypt('GCM auth test', keyHex256, ivHex, 'GCM', 256, 'NoPadding')
+    expect(await aesDecrypt(c, keyHex256, ivHex, 'GCM', 256, 'NoPadding')).toBe('GCM auth test')
+  })
+  it('decrypt with wrong key throws', async () => {
+    const wrongKey = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'
+    const c = await aesEncrypt('secret', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
+    await expect(aesDecrypt(c, wrongKey, ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/解密失败/)
+  })
+  it('decrypt with wrong IV throws', async () => {
+    const c = await aesEncrypt('secret', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
+    await expect(aesDecrypt(c, keyHex256, 'ffffffffffffffffffffffffffffffff', 'CBC', 256, 'PKCS7')).rejects.toThrow(/解密失败/)
+  })
+  it('reject short key', async () => {
+    await expect(aesEncrypt('test', 'dead', ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/密钥/)
+  })
+  it('reject short IV for CBC', async () => {
+    await expect(aesEncrypt('test', keyHex256, '0001', 'CBC', 256, 'PKCS7')).rejects.toThrow(/IV/)
+  })
+  it('generateAesKey produces usable 256-bit key', async () => {
+    const gk = await generateAesKey(256)
+    expect(gk).toHaveLength(64)
+    const c = await aesEncrypt('test', gk, ivHex, 'CBC', 256, 'PKCS7')
+    expect(await aesDecrypt(c, gk, ivHex, 'CBC', 256, 'PKCS7')).toBe('test')
   })
 })
