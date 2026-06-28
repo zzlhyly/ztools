@@ -212,27 +212,9 @@ export async function sha512(input: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// hashFile — transitional: calls old 4-algorithm Rust API, extracts requested
+// hashFile — calls Rust backend with path + algorithm
 // ---------------------------------------------------------------------------
 
-export async function hashFile(path: string, algorithm: HashAlgorithm): Promise<string> {
-  const result = await invoke<{
-    sha1: string
-    sha256: string
-    sha384: string
-    sha512: string
-  }>('hash_file', { path })
-
-  switch (algorithm) {
-    case 'SHA-1':
-      return result.sha1
-    case 'SHA-256':
-      return result.sha256
-    case 'SHA-384':
-      return result.sha384
-    case 'SHA-512':
-      return result.sha512
-    default:
-      throw new Error(`hashFile does not support ${algorithm} yet (Task 14)`)
-  }
+export async function hashFile(path: string, algorithm: HashAlgorithm = 'SHA-256'): Promise<string> {
+  return invoke<string>('hash_file', { path, algorithm })
 }

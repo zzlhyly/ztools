@@ -176,81 +176,63 @@ async fn cancel_download(
     Ok(())
 }
 
-#[derive(serde::Serialize)]
-struct HashResults {
-    sha1: String,
-    sha256: String,
-    sha384: String,
-    sha512: String,
-}
-
-/// Hash a file: single reader thread streams chunks via channels to 4 hasher threads.
-/// Each hasher thread uses ring (SHA-NI) for hardware-accelerated hashing.
+/// Hash a file with the specified algorithm using ring (SHA-NI) for hardware acceleration.
 #[tauri::command]
-async fn hash_file(path: String) -> Result<HashResults, String> {
+async fn hash_file(path: String, algorithm: String) -> Result<String, String> {
     tokio::task::spawn_blocking(move || {
         use std::io::Read;
-        use std::sync::mpsc::sync_channel;
-        use std::sync::Arc;
         use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA384, SHA512};
-
-        type Chunk = Arc<Vec<u8>>;
 
         let mut file = std::fs::File::open(&path)
             .map_err(|e| format!("Failed to open file: {}", e))?;
 
-        let (tx1, rx1) = sync_channel::<Chunk>(8);
-        let (tx2, rx2) = sync_channel::<Chunk>(8);
-        let (tx3, rx3) = sync_channel::<Chunk>(8);
-        let (tx4, rx4) = sync_channel::<Chunk>(8);
+        let mut buf = [0u8; 1_048_576];
 
-        std::thread::scope(|s| -> Result<HashResults, String> {
-            let t1 = s.spawn(move || {
+        let hash = match algorithm.as_str() {
+            "SHA-1" => {
                 let mut ctx = Context::new(&SHA1_FOR_LEGACY_USE_ONLY);
-                while let Ok(chunk) = rx1.recv() { ctx.update(&chunk); }
+                loop {
+                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                    if n == 0 { break; }
+                    ctx.update(&buf[..n]);
+                }
                 hex::encode(ctx.finish().as_ref())
-            });
-            let t256 = s.spawn(move || {
-                let mut ctx = Context::new(&SHA256);
-                while let Ok(chunk) = rx2.recv() { ctx.update(&chunk); }
-                hex::encode(ctx.finish().as_ref())
-            });
-            let t384 = s.spawn(move || {
-                let mut ctx = Context::new(&SHA384);
-                while let Ok(chunk) = rx3.recv() { ctx.update(&chunk); }
-                hex::encode(ctx.finish().as_ref())
-            });
-            let t512 = s.spawn(move || {
-                let mut ctx = Context::new(&SHA512);
-                while let Ok(chunk) = rx4.recv() { ctx.update(&chunk); }
-                hex::encode(ctx.finish().as_ref())
-            });
-
-            // Reader: stream file in 1MB chunks to all 4 hashers
-            let mut buf = vec![0u8; 1_048_576];
-            loop {
-                let n = file.read(&mut buf)
-                    .map_err(|e| format!("Read error: {}", e))?;
-                if n == 0 { break; }
-                let chunk = Arc::new(buf[..n].to_vec());
-                tx1.send(chunk.clone()).ok();
-                tx2.send(chunk.clone()).ok();
-                tx3.send(chunk.clone()).ok();
-                tx4.send(chunk).ok();
             }
-            drop(tx1); drop(tx2); drop(tx3); drop(tx4);
+            "SHA-256" => {
+                let mut ctx = Context::new(&SHA256);
+                loop {
+                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                    if n == 0 { break; }
+                    ctx.update(&buf[..n]);
+                }
+                hex::encode(ctx.finish().as_ref())
+            }
+            "SHA-384" => {
+                let mut ctx = Context::new(&SHA384);
+                loop {
+                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                    if n == 0 { break; }
+                    ctx.update(&buf[..n]);
+                }
+                hex::encode(ctx.finish().as_ref())
+            }
+            "SHA-512" => {
+                let mut ctx = Context::new(&SHA512);
+                loop {
+                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                    if n == 0 { break; }
+                    ctx.update(&buf[..n]);
+                }
+                hex::encode(ctx.finish().as_ref())
+            }
+            _ => return Err(format!("Unsupported hash algorithm: {}", algorithm)),
+        };
 
-            Ok(HashResults {
-                sha1: t1.join().unwrap(),
-                sha256: t256.join().unwrap(),
-                sha384: t384.join().unwrap(),
-                sha512: t512.join().unwrap(),
-            })
-        })
-    })
-    .await
-    .map_err(|e| format!("Hash task panicked: {}", e))?
+        Ok(hash)
+    }).await.map_err(|e| format!("Hash task panicked: {}", e))?
 }
+
+
 
 #[tauri::command]
 fn get_default_download_dir() -> String {
