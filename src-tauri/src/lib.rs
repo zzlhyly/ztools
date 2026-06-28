@@ -177,6 +177,60 @@ async fn cancel_download(
 }
 
 #[tauri::command]
+fn hash_file(path: String, algorithm: String) -> Result<String, String> {
+    use std::io::Read;
+
+    let file = std::fs::File::open(&path)
+        .map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut reader = std::io::BufReader::new(file);
+    let mut buffer = [0u8; 65536]; // 64KB chunks
+
+    match algorithm.as_str() {
+        "SHA-1" => {
+            use sha1::{Sha1, Digest};
+            let mut hasher = Sha1::new();
+            loop {
+                let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                hasher.update(&buffer[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        "SHA-256" => {
+            use sha2::{Sha256, Digest};
+            let mut hasher = Sha256::new();
+            loop {
+                let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                hasher.update(&buffer[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        "SHA-384" => {
+            use sha2::{Sha384, Digest};
+            let mut hasher = Sha384::new();
+            loop {
+                let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                hasher.update(&buffer[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        "SHA-512" => {
+            use sha2::{Sha512, Digest};
+            let mut hasher = Sha512::new();
+            loop {
+                let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                hasher.update(&buffer[..n]);
+            }
+            Ok(format!("{:x}", hasher.finalize()))
+        }
+        _ => Err(format!("Unknown algorithm: {}", algorithm)),
+    }
+}
+
+#[tauri::command]
 fn get_default_download_dir() -> String {
     dirs_next::download_dir()
         .map(|d| d.to_string_lossy().to_string())
@@ -206,6 +260,7 @@ pub fn run() {
             cancel_download,
             check_ffmpeg,
             get_default_download_dir,
+            hash_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
