@@ -11,6 +11,7 @@ const routes = [
   { path: '/color', component: () => import('@/tools/ColorConverter.vue') },
   { path: '/hash', component: () => import('@/tools/HashCalculator.vue') },
   { path: '/m3u8', component: () => import('@/tools/M3u8Downloader.vue') },
+  { path: '/aes', component: () => import('@/tools/AesTool.vue') },
 ]
 
 const router = createRouter({

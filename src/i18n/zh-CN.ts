@@ -44,6 +44,10 @@ export default {
       name: 'M3U8 下载器',
       description: '下载 M3U8 视频并转换为 MP4',
     },
+    aes: {
+      name: 'AES 加密/解密',
+      description: 'AES 数据加密和解密',
+    },
   },
   common: {
     input: '输入',

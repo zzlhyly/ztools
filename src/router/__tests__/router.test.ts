@@ -14,6 +14,7 @@ describe('Router', () => {
     expect(routePaths).toContain('/color')
     expect(routePaths).toContain('/hash')
     expect(routePaths).toContain('/m3u8')
+    expect(routePaths).toContain('/aes')
   })
 
   it('should redirect root to /json', () => {
@@ -21,7 +22,7 @@ describe('Router', () => {
     expect(rootRoute?.redirect).toBe('/json')
   })
 
-  it('should have 10 routes total', () => {
-    expect(router.options.routes).toHaveLength(10)
+  it('should have 11 routes total', () => {
+    expect(router.options.routes).toHaveLength(11)
   })
 })

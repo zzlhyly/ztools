@@ -44,6 +44,10 @@ export default {
       name: 'M3U8 Downloader',
       description: 'Download M3U8 videos and convert to MP4',
     },
+    aes: {
+      name: 'AES Encrypt/Decrypt',
+      description: 'Encrypt and decrypt data using AES',
+    },
   },
   common: {
     input: 'Input',
