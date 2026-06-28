@@ -184,43 +184,77 @@ struct HashResults {
     sha512: String,
 }
 
-/// Hash a file once, computing all 4 algorithms in a single pass.
-/// Uses ring (SHA-NI / ARM crypto) for hardware-accelerated hashing.
-/// Runs on a dedicated blocking thread to avoid freezing the UI.
+/// Hash a file using ring (SHA-NI / ARM crypto), 4 threads in parallel.
+/// Each thread reads the file independently and hashes one algorithm.
 #[tauri::command]
 async fn hash_file(path: String) -> Result<HashResults, String> {
     tokio::task::spawn_blocking(move || {
-        use std::io::Read;
-        use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA384, SHA512};
+        std::thread::scope(|s| -> Result<HashResults, String> {
+            let t1 = s.spawn(|| hash_one(&path, Algorithm::Sha1));
+            let t256 = s.spawn(|| hash_one(&path, Algorithm::Sha256));
+            let t384 = s.spawn(|| hash_one(&path, Algorithm::Sha384));
+            let t512 = s.spawn(|| hash_one(&path, Algorithm::Sha512));
 
-        let mut file = std::fs::File::open(&path)
-            .map_err(|e| format!("Failed to open file: {}", e))?;
-        let mut buffer = vec![0u8; 1_048_576]; // 1MB heap buffer
-
-        let mut ctx1 = Context::new(&SHA1_FOR_LEGACY_USE_ONLY);
-        let mut ctx256 = Context::new(&SHA256);
-        let mut ctx384 = Context::new(&SHA384);
-        let mut ctx512 = Context::new(&SHA512);
-
-        loop {
-            let n = file.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
-            if n == 0 { break; }
-            let chunk = &buffer[..n];
-            ctx1.update(chunk);
-            ctx256.update(chunk);
-            ctx384.update(chunk);
-            ctx512.update(chunk);
-        }
-
-        Ok(HashResults {
-            sha1: hex::encode(ctx1.finish().as_ref()),
-            sha256: hex::encode(ctx256.finish().as_ref()),
-            sha384: hex::encode(ctx384.finish().as_ref()),
-            sha512: hex::encode(ctx512.finish().as_ref()),
+            Ok(HashResults {
+                sha1: t1.join().map_err(|e| format!("{:?}", e))??,
+                sha256: t256.join().map_err(|e| format!("{:?}", e))??,
+                sha384: t384.join().map_err(|e| format!("{:?}", e))??,
+                sha512: t512.join().map_err(|e| format!("{:?}", e))??,
+            })
         })
     })
     .await
     .map_err(|e| format!("Hash task panicked: {}", e))?
+}
+
+enum Algorithm { Sha1, Sha256, Sha384, Sha512 }
+
+fn hash_one(path: &str, algo: Algorithm) -> Result<String, String> {
+    use std::io::Read;
+    use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA384, SHA512};
+
+    let mut file = std::fs::File::open(path)
+        .map_err(|e| format!("Failed to open file: {}", e))?;
+    let mut buf = vec![0u8; 1_048_576];
+
+    match algo {
+        Algorithm::Sha1 => {
+            let mut ctx = Context::new(&SHA1_FOR_LEGACY_USE_ONLY);
+            loop {
+                let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                ctx.update(&buf[..n]);
+            }
+            Ok(hex::encode(ctx.finish().as_ref()))
+        }
+        Algorithm::Sha256 => {
+            let mut ctx = Context::new(&SHA256);
+            loop {
+                let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                ctx.update(&buf[..n]);
+            }
+            Ok(hex::encode(ctx.finish().as_ref()))
+        }
+        Algorithm::Sha384 => {
+            let mut ctx = Context::new(&SHA384);
+            loop {
+                let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                ctx.update(&buf[..n]);
+            }
+            Ok(hex::encode(ctx.finish().as_ref()))
+        }
+        Algorithm::Sha512 => {
+            let mut ctx = Context::new(&SHA512);
+            loop {
+                let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                ctx.update(&buf[..n]);
+            }
+            Ok(hex::encode(ctx.finish().as_ref()))
+        }
+    }
 }
 
 #[tauri::command]
