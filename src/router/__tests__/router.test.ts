@@ -22,7 +22,7 @@ describe('Router', () => {
     expect(rootRoute?.redirect).toBe('/json')
   })
 
-  it('should have 11 routes total', () => {
-    expect(router.options.routes).toHaveLength(11)
+  it('should have 15 routes total', () => {
+    expect(router.options.routes).toHaveLength(15)
   })
 })
