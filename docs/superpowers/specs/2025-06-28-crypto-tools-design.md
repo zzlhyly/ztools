@@ -5,7 +5,7 @@
 
 ## Overview
 
-Add 5 new tools and redesign 1 existing tool for cryptographic and identifier operations in ztools. All cryptography uses Web Crypto API (no Rust backend changes needed, except Hash file hashing retains existing Rust `hash_file` command).
+Add 5 new tools and redesign 1 existing tool for cryptographic and identifier operations in ztools. All cryptography uses Web Crypto API. One Rust backend change: `hash_file` command modified to accept an `algorithm` parameter so file hashing only computes the selected algorithm instead of all four.
 
 ## Tools
 
@@ -123,7 +123,7 @@ src/
 
 | Parameter | Options | Default | Notes |
 |-----------|---------|---------|-------|
-| Mode | ECB, CBC, CFB, OFB, CTR, GCM | CBC | ECB: IV hidden. GCM: auth tag shown/required |
+| Mode | ECB, CBC, CTR, GCM | CBC | CFB/OFB removed — not supported by Web Crypto API in any browser. ECB: IV hidden. GCM: auth tag handling |
 | Key Size | 128 bit, 192 bit, 256 bit | 256 bit | Determines key length for random generation |
 | Padding | PKCS7, NoPadding, ZeroPadding, ISO10126, ANSI X.923 | PKCS7 | NoPadding: validate input length matches block size |
 | Output | Base64, HEX | Base64 | Changes display, not internal computation |
@@ -134,16 +134,24 @@ src/
 - "[Random]" button generates cryptographically random key/IV via `crypto.getRandomValues`.
 - Key length enforced: 128-bit key rejects 24-byte input with clear error message.
 
+### Key Format Detection
+
+Key and IV inputs auto-detect format: if input is pure HEX characters with even length → parse as HEX; otherwise treat as UTF-8 string. A small label beside the input shows detected format and byte count.
+
 ### GCM Mode
 
-- Encrypt: output includes auth tag appended; auth tag extracted and shown separately.
-- Decrypt: separate auth tag input field appears; decryption fails without correct tag.
+- Encrypt: ciphertext and 128-bit auth tag displayed separately (two lines in CodeOutput).
+- Decrypt: user pastes `ciphertext || tag` concatenated into the input field; tool splits internally by tag length (last 16 bytes). No separate tag input field needed. Matches how most libraries output GCM results.
+- Auth tag length fixed at 128 bits (Web Crypto default).
 
 ### Edge Cases
 
 - ECB mode: IV row hidden entirely.
-- NoPadding: block misalignment → error message.
-- Decryption with wrong key/IV → `OperationError` caught, clear error displayed.
+- CTR mode: no padding allowed — padding dropdown hidden/disabled, forced to NoPadding.
+- NoPadding: input byte count displayed in real-time below input (`当前: 47 / 16 字节（未对齐）`), turns warning color when misaligned. Encrypt button not disabled but shows warning icon. Decrypt never checks alignment (ciphertext always aligned).
+- When NoPadding selected, other padding options hidden (padding dropdown replaced with static "NoPadding" label).
+- Decryption with wrong key/IV → `OperationError` caught, translated to user-friendly message.
+- Key byte count label warns on mismatch (e.g., 24-byte key for 256-bit AES).
 
 ### Files created
 
@@ -185,7 +193,8 @@ src/
 
 ### Behavior
 
-- Click "Generate" → `crypto.subtle.generateKey({ name: 'RSASSA-PKCS1-v1_5', modulusLength, ... })` → export as `spki` (public) and `pkcs8` (private) → wrap in PEM headers.
+- Click "Generate" → `crypto.subtle.generateKey({ name: 'RSA-OAEP', modulusLength, ... })` → export as `spki` (public) and `pkcs8` (private) → wrap in PEM headers.
+- Key generated with RSA-OAEP algorithm, but PEM export is algorithm-agnostic (bare RSA parameters). In RSA Crypto tool, the same PEM can be imported as RSA-OAEP for encryption or RSA-PSS for signing — seamlessly dual-use.
 - Private key panel has distinct background (warning tint) to visually separate from public key.
 - Each click generates a new key pair (no reuse).
 - Copy buttons per key panel.
@@ -244,17 +253,29 @@ src/
 | Sign Padding | PKCS#1 v1.5, PSS-SHA-256, PSS-SHA-512 | PSS-SHA-256 | For sign/verify operations |
 | Output Format | Base64, HEX | Base64 | For encrypt/sign output |
 
-### Constraints
+### Key Dual-Use
 
-- **Input length limit:** RSA encrypt max plaintext = `keySize/8 - 2*hashSize - 2` bytes (OAEP). E.g., 2048-bit OAEP-SHA256: max ~190 bytes. Exceeding this shows a clear error.
-- **Key format:** Auto-detect PEM/DER from input. PEM lines stripped internally.
-- **Signing:** Signature output is not meaningful to display as text — Base64/HEX representation shown.
+Same PEM key pair from Key Generator can be used for both encryption and signing in this tool. Internally, PEM is imported separately for each operation with the appropriate Web Crypto algorithm name:
+- Encrypt/Decrypt: import as `RSA-OAEP`
+- Sign/Verify: import as `RSA-PSS`
+
+### Input Length Limit
+
+RSA encrypt max payload size depends on key size and padding. Displayed as live hint below the data input:
+
+```
+当前可加密: ≤190 字节  (2048-bit, OAEP-SHA256)
+```
+
+When input exceeds the limit, encrypt button is disabled with tooltip: `输入超过 190 字节上限`。Decrypt has no size limit (ciphertext always fits).
+
+**Formula:** `maxBytes = keyBits/8 - 2*hashBytes - 2` (for OAEP).
 
 ### Edge Cases
 
-- Invalid PEM format → parse error shown at key input.
-- Wrong key type (e.g., private key in public key field) → clear error on operation.
-- Empty key fields → button disabled with tooltip "Requires public key" etc.
+- Invalid PEM format → parse error shown beside key input field immediately.
+- Wrong key type (e.g., private key pasted into public key field) → clear error on operation: `密钥格式错误：需要公钥 PEM 格式`.
+- Empty key fields → operation buttons disabled with appropriate tooltip.
 
 ### Files created
 
@@ -292,10 +313,16 @@ Compute Hash-based Message Authentication Code. Natural complement to the Hash t
 
 SHA-1, SHA-256 (default), SHA-384, SHA-512.
 
+### Key Input
+
+Secret key auto-detects format: pure HEX string with even length → treated as HEX bytes; otherwise treated as UTF-8 string. Label beside input shows: `（已识别为 HEX / 4 字节）` or `（UTF-8 字符串 / 8 字节）`.
+
+No "random generate" button — HMAC keys are pre-shared from external systems, random generation offers no value.
+
 ### Behavior
 
 - Output always HEX (HMAC standard convention).
-- Auto-recalculate on algorithm/key/message change.
+- Auto-recalculate on algorithm/key/message change when all required fields filled and last operation succeeded.
 
 ### Files created
 
@@ -384,9 +411,56 @@ export function pemToArrayBuffer(pem: string): ArrayBuffer
 export function arrayBufferToPem(buffer: ArrayBuffer, type: 'PUBLIC KEY' | 'PRIVATE KEY'): string
 ```
 
-### Error Handling
+### Error Handling — Two-Layer Strategy
 
-All functions throw typed errors (`AesError`, `RsaError`, `KeyFormatError`) with human-readable messages suitable for direct display in the UI.
+**Layer 1: Input validation (pre-Web Crypto)**
+Format checks, length validation, PEM parsing done before calling Web Crypto. Produces specific Chinese messages:
+- `密钥格式错误：需要 PEM 或 HEX 格式`
+- `输入超过 190 字节上限（2048-bit OAEP-SHA256）`
+- `IV 长度必须为 16 字节（AES 块大小）`
+
+**Layer 2: Runtime fallback (Web Crypto exceptions)**
+Web Crypto `DOMException` translated to broad categories (no per-exception mapping):
+- `OperationError` during decrypt → `解密失败：密钥或 IV 不匹配，或密文已损坏`
+- `OperationError` during encrypt → `加密失败：请检查密钥长度和算法兼容性`
+- `DataError` during key import → `密钥格式无效`
+- Unexpected errors → original message with `加密异常：` prefix
+
+Typed errors (`AesError`, `RsaError`, `KeyFormatError`) used internally in `crypto.ts`. Components catch and display the message string.
+
+---
+
+## State Management — Auto-Recalculate Rules
+
+A tool enters "computable" state when **all required fields are non-empty + last operation succeeded + no format errors**. Auto-recalculate only fires on parameter change while in this state.
+
+**Required fields per tool:**
+| Tool | Required |
+|------|----------|
+| Hash | Input text |
+| AES | Input text + Key (+ IV for CBC/CTR/GCM) |
+| HMAC | Message + Secret Key |
+| RSA Crypto | Data + key fields needed for the last-used operation |
+| RSA KeyGen | None (button-only trigger) |
+| UUID | None (button-only trigger) |
+
+`ToolTextarea` `submit-hotkey` (Ctrl+Enter) triggers the primary action (calculate/encrypt/generate) across all tools.
+
+---
+
+## Browser Compatibility
+
+| Algorithm | Chrome | Firefox | Safari | Edge |
+|-----------|--------|---------|--------|------|
+| SHA-256/384/512 | ✅ | ✅ | ✅ | ✅ |
+| SHA3-256/512 | ✅ 85+ | ✅ 118+ | ⚠️ | ✅ |
+| AES-CBC/CTR/GCM | ✅ | ✅ | ✅ | ✅ |
+| AES-CFB/OFB | ❌ | ❌ | ❌ | ❌ |
+| RSA-OAEP/PSS | ✅ | ✅ | ✅ | ✅ |
+
+**Decisions:**
+- **AES-CFB/OFB removed** — not available in any browser's Web Crypto. Uncommon in practice.
+- **SHA3 kept with runtime detection** — if `subtle.digest('SHA3-...')` throws `NotSupportedError`, the algorithm is greyed out in Hash dropdown with label "（浏览器不支持）". No JS fallback — SHA-256 is the practical alternative.
 
 ---
 
@@ -413,16 +487,15 @@ tools.<key>.*             — UI labels as needed
 
 ## Testing Strategy
 
-- **Unit tests:** `src/utils/__tests__/crypto.test.ts` — all utility functions with known test vectors (NIST test vectors for AES, RSA, HMAC).
-- **Component tests:** `src/tools/__tests__/AesTool.test.ts`, etc. — basic render, parameter interaction.
-- **Manual verification:** Real browser environment for Web Crypto integration.
+- **Unit tests:** `src/utils/__tests__/crypto.test.ts` — all utility functions with hand-picked golden test vectors from each algorithm's RFC or Wikipedia examples (not parsing NIST format). Each function: 2-3 happy path cases + 1 error case.
+- **Component tests:** `src/tools/__tests__/*.test.ts` — UI parameter interaction only (algorithm switch clears output, required-field button states, GCM tag UI toggle). Do not retest `crypto.ts` logic at component level.
+- **Manual verification:** Real browser environment for full Web Crypto integration (test CI can't simulate `crypto.subtle`).
 
 ---
 
 ## Non-Goals
 
-- File encryption (AES/RSA on files) — text only.
-- Rust backend changes (except existing `hash_file` adaptation).
+- File encryption/decryption (AES/RSA on files) — text only.
 - JWT debugger, certificate viewer, SSH key tools — out of scope.
 - Key storage / keychain integration.
 - Drag-and-drop file input.
