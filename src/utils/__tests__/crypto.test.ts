@@ -7,6 +7,7 @@ import {
   generateAesKey, generateAesIv, aesEncrypt, aesDecrypt,
   generateRsaKeyPair, importRsaPublicKey, importRsaPrivateKey, getRsaMaxPayload,
   rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify,
+  computeHmac, generateUuids,
 } from '../crypto'
 
 describe('CryptoError', () => {
@@ -384,5 +385,57 @@ describe('RSA key dual-use', () => {
     expect(await rsaDecrypt(c, k.privateKey, 'OAEP-SHA256')).toBe('dual')
     const s = await rsaSign('sign', k.privateKey, 'PSS-SHA256')
     expect(await rsaVerify(s, 'sign', k.publicKey, 'PSS-SHA256')).toBe(true)
+  })
+})
+
+describe('computeHmac', () => {
+  it('HMAC-SHA256 with text key', async () => {
+    const r = await computeHmac('hello', 'secret', 'SHA-256')
+    expect(r).toHaveLength(64); expect(/^[0-9a-f]+$/.test(r)).toBe(true)
+  })
+  it('HMAC-SHA256 with hex key', async () => {
+    const r = await computeHmac('Hi There', '0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b', 'SHA-256')
+    expect(r).toHaveLength(64)
+  })
+  it('HMAC-SHA1 -> 40 chars', async () => {
+    expect((await computeHmac('hello', 'key', 'SHA-1')).length).toBe(40)
+  })
+  it('HMAC-SHA384 -> 96 chars', async () => {
+    expect((await computeHmac('hello', 'key', 'SHA-384')).length).toBe(96)
+  })
+  it('HMAC-SHA512 -> 128 chars', async () => {
+    expect((await computeHmac('hello', 'key', 'SHA-512')).length).toBe(128)
+  })
+  it('empty message works', async () => {
+    expect((await computeHmac('', 'key', 'SHA-256')).length).toBe(64)
+  })
+  it('empty key works', async () => {
+    expect((await computeHmac('hello', '', 'SHA-256')).length).toBe(64)
+  })
+  it('unicode works', async () => {
+    expect((await computeHmac('\u4f60\u597d', '\u5bc6\u94a5', 'SHA-256')).length).toBe(64)
+  })
+  it('different keys -> different results', async () => {
+    expect(await computeHmac('hello','k1','SHA-256')).not.toBe(await computeHmac('hello','k2','SHA-256'))
+  })
+  it('different algorithms -> different results', async () => {
+    expect(await computeHmac('hello','key','SHA-256')).not.toBe(await computeHmac('hello','key','SHA-512'))
+  })
+})
+
+describe('generateUuids', () => {
+  it('1 UUID', () => {
+    const uuids = generateUuids(1)
+    expect(uuids[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+  })
+  it('5 UUIDs', () => {
+    expect(generateUuids(5).length).toBe(5)
+    generateUuids(5).forEach(u => expect(u).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/))
+  })
+  it('100 unique UUIDs', () => {
+    expect(new Set(generateUuids(100)).size).toBe(100)
+  })
+  it('0 -> empty array', () => {
+    expect(generateUuids(0)).toEqual([])
   })
 })

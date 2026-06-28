@@ -352,3 +352,28 @@ export async function rsaVerify(signatureB64: string, data: string, publicKeyPem
     return await crypto.subtle.verify(algorithm, key, sigBytes, new TextEncoder().encode(data))
   } catch (e: any) { throw new CryptoError(`Verification failed: ${e.message}`) }
 }
+
+// ============================================================
+// HMAC
+// ============================================================
+
+export async function computeHmac(message: string, key: string, algorithm: string): Promise<string> {
+  const algoName: any = algorithm
+  let keyBytes = parseKeyBytes(key.trim())
+  // Web Crypto API does not support zero-length keys; use minimal non-empty key
+  if (keyBytes.length === 0) keyBytes = new Uint8Array([0])
+  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: algoName }, false, ['sign'])
+  const msgBytes = new TextEncoder().encode(message)
+  const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes)
+  return arrayBufferToHex(sig)
+}
+
+// ============================================================
+// UUID
+// ============================================================
+
+export function generateUuids(count: number): string[] {
+  const results: string[] = []
+  for (let i = 0; i < count; i++) results.push(crypto.randomUUID())
+  return results
+}
