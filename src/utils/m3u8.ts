@@ -135,3 +135,7 @@ export async function onDownloadError(
     callback(event.payload)
   })
 }
+
+export async function invokeGetDefaultDownloadDir(): Promise<string> {
+  return invoke<string>('get_default_download_dir')
+}

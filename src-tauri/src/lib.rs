@@ -177,6 +177,13 @@ async fn cancel_download(
 }
 
 #[tauri::command]
+fn get_default_download_dir() -> String {
+    dirs_next::download_dir()
+        .map(|d| d.to_string_lossy().to_string())
+        .unwrap_or_default()
+}
+
+#[tauri::command]
 async fn check_ffmpeg(ffmpeg_path: String) -> Result<bool, String> {
     let output = std::process::Command::new(&ffmpeg_path)
         .arg("-version")
@@ -189,6 +196,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(DownloadState::new())
         .invoke_handler(tauri::generate_handler![
             fetch_page,
@@ -197,6 +205,7 @@ pub fn run() {
             start_download,
             cancel_download,
             check_ffmpeg,
+            get_default_download_dir,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
