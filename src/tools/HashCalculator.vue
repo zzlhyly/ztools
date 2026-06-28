@@ -41,12 +41,9 @@ const handleCalculate = async () => {
 
     if (selectedFile.value) {
       // File mode — stream hash via Rust
-      const sha1 = await hashFile(selectedFile.value, 'SHA-1')
-      const sha256 = await hashFile(selectedFile.value, 'SHA-256')
-      const sha384 = await hashFile(selectedFile.value, 'SHA-384')
-      const sha512 = await hashFile(selectedFile.value, 'SHA-512')
+      const result = await hashFile(selectedFile.value)
 
-      output.value = `SHA-1:\n${sha1}\n\nSHA-256:\n${sha256}\n\nSHA-384:\n${sha384}\n\nSHA-512:\n${sha512}`
+      output.value = `SHA-1:\n${result.sha1}\n\nSHA-256:\n${result.sha256}\n\nSHA-384:\n${result.sha384}\n\nSHA-512:\n${result.sha512}`
     } else {
       // Text mode
       const sha1 = await calculateHash(input.value, 'SHA-1')

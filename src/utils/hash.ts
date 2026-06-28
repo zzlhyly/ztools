@@ -15,10 +15,14 @@ export async function calculateHash(input: string, algorithm: HashAlgorithm): Pr
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-/// Hash a file on disk using streaming (64KB chunks).
-/// Requires Tauri backend — file path must be accessible from the Rust side.
-export async function hashFile(path: string, algorithm: HashAlgorithm): Promise<string> {
-  return invoke<string>('hash_file', { path, algorithm })
+/// Hash a file on disk in a single pass — computes all 4 algorithms concurrently via Rust streaming.
+export async function hashFile(path: string): Promise<{
+  sha1: string
+  sha256: string
+  sha384: string
+  sha512: string
+}> {
+  return invoke('hash_file', { path })
 }
 
 export async function sha1(input: string): Promise<string> {
