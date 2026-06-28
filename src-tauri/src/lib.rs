@@ -122,13 +122,13 @@ async fn parse_m3u8(
 
 #[derive(Debug, Deserialize)]
 pub struct DownloadConfig {
-    task_id: String,
-    m3u8_url: String,
-    output_dir: String,
-    filename: String,
-    headers: HashMap<String, String>,
-    ffmpeg_path: String,
-    max_segment_concurrent: usize,
+    pub task_id: String,
+    pub m3u8_url: String,
+    pub output_dir: String,
+    pub filename: String,
+    pub headers: HashMap<String, String>,
+    pub ffmpeg_path: String,
+    pub max_segment_concurrent: usize,
 }
 
 #[tauri::command]
