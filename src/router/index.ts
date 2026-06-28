@@ -12,6 +12,10 @@ const routes = [
   { path: '/hash', component: () => import('@/tools/HashCalculator.vue') },
   { path: '/m3u8', component: () => import('@/tools/M3u8Downloader.vue') },
   { path: '/aes', component: () => import('@/tools/AesTool.vue') },
+  { path: '/rsa-keys', component: () => import('@/tools/RsaKeyGen.vue') },
+  { path: '/rsa-crypto', component: () => import('@/tools/RsaCrypto.vue') },
+  { path: '/hmac', component: () => import('@/tools/HmacTool.vue') },
+  { path: '/uuid', component: () => import('@/tools/UuidTool.vue') },
 ]
 
 const router = createRouter({

@@ -14,6 +14,10 @@ import {
   Hash,
   Film,
   Shield,
+  KeyRound,
+  Lock,
+  Fingerprint,
+  ClipboardType,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -42,6 +46,10 @@ const tools: ToolItem[] = [
   { path: '/hash', icon: Hash, key: 'hash' },
   { path: '/m3u8', icon: Film, key: 'm3u8' },
   { path: '/aes', icon: Shield, key: 'aes' },
+  { path: '/rsa-keys', icon: KeyRound, key: 'rsaKeys' },
+  { path: '/rsa-crypto', icon: Lock, key: 'rsaCrypto' },
+  { path: '/hmac', icon: Fingerprint, key: 'hmac' },
+  { path: '/uuid', icon: ClipboardType, key: 'uuid' },
 ]
 
 const searchQuery = ref('')
