@@ -218,3 +218,69 @@ export async function aesDecrypt(
     throw new CryptoError(`Decryption failed: key/IV mismatch or corrupted data`)
   }
 }
+
+// ============================================================
+// RSA
+// ============================================================
+
+const PEM_PUBLIC_HEADER = '-----BEGIN PUBLIC KEY-----'
+const PEM_PUBLIC_FOOTER = '-----END PUBLIC KEY-----'
+const PEM_PRIVATE_HEADER = '-----BEGIN PRIVATE KEY-----'
+const PEM_PRIVATE_FOOTER = '-----END PRIVATE KEY-----'
+// ponytail: pkcs1 format not supported by Web Crypto API; modern tools produce pkcs8
+
+function pemToDer(pem: string): ArrayBuffer {
+  const lines = pem.trim().split('\n').filter(line => !line.startsWith('-----'))
+  return base64ToArrayBuffer(lines.join(''))
+}
+
+function derToPem(der: ArrayBuffer, type: 'PUBLIC KEY' | 'PRIVATE KEY'): string {
+  const b64 = arrayBufferToBase64(der)
+  const lines = b64.match(/.{1,64}/g)?.join('\n') || b64
+  return `-----BEGIN ${type}-----\n${lines}\n-----END ${type}-----`
+}
+
+function validatePem(pem: string, header: string, footer: string): ArrayBuffer {
+  if (!pem || typeof pem !== 'string') throw new CryptoError('Key format error: empty input')
+  const t = pem.trim()
+  if (!t.includes(header) || !t.includes(footer)) throw new CryptoError(`Key format error: expected ${header}`)
+  try { return pemToDer(t) } catch { throw new CryptoError('Key format error: Base64 decode failed') }
+}
+
+export async function generateRsaKeyPair(
+  modulusLength: 1024 | 2048 | 4096 = 2048,
+): Promise<{ publicKey: string; privateKey: string }> {
+  const keyPair = await crypto.subtle.generateKey(
+    { name: 'RSA-OAEP', modulusLength, publicExponent: new Uint8Array([1,0,1]), hash: 'SHA-256' },
+    true, ['encrypt', 'decrypt'])
+  const pubDer = await crypto.subtle.exportKey('spki', keyPair.publicKey)
+  const privDer = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
+  return {
+    publicKey: derToPem(pubDer, 'PUBLIC KEY'),
+    privateKey: derToPem(privDer, 'PRIVATE KEY'),
+  }
+}
+
+export async function importRsaPublicKey(pem: string, forEncrypt: boolean): Promise<CryptoKey> {
+  const der = validatePem(pem, PEM_PUBLIC_HEADER, PEM_PUBLIC_FOOTER)
+  const algorithm = forEncrypt
+    ? { name: 'RSA-OAEP', hash: 'SHA-256' }
+    : { name: 'RSA-PSS', hash: 'SHA-256' }
+  const usages: KeyUsage[] = forEncrypt ? ['encrypt'] : ['verify']
+  try { return await crypto.subtle.importKey('spki', der, algorithm, false, usages) }
+  catch (e: any) { throw new CryptoError(`Key import failed: ${e.message || 'invalid public key'}`) }
+}
+
+export async function importRsaPrivateKey(pem: string): Promise<CryptoKey> {
+  const der = validatePem(pem, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER)
+  try {
+    return await crypto.subtle.importKey('pkcs8', der, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt'])
+  } catch { throw new CryptoError('Key import failed: invalid private key') }
+}
+
+export function getRsaMaxPayload(modulusLength: number, padding: string): number {
+  const keyBytes = modulusLength / 8
+  if (padding === 'PKCS#1 v1.5') return keyBytes - 11
+  const hashBytes = padding.includes('SHA-512') ? 64 : padding.includes('SHA-256') ? 32 : padding.includes('SHA-1') ? 20 : 32
+  return keyBytes - 2 * hashBytes - 2
+}

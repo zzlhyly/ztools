@@ -5,6 +5,7 @@ import {
   arrayBufferToHex, hexToArrayBuffer, detectKeyFormat,
   parseKeyBytes, padPKCS7, unpadPKCS7, padZero, unpadZero,
   generateAesKey, generateAesIv, aesEncrypt, aesDecrypt,
+  generateRsaKeyPair, importRsaPublicKey, importRsaPrivateKey, getRsaMaxPayload,
 } from '../crypto'
 
 describe('CryptoError', () => {
@@ -237,5 +238,78 @@ describe('aesEncrypt + aesDecrypt (real crypto.subtle)', () => {
     expect(gk).toHaveLength(64)
     const c = await aesEncrypt('test', gk, ivHex, 'CBC', 256, 'PKCS7')
     expect(await aesDecrypt(c, gk, ivHex, 'CBC', 256, 'PKCS7')).toBe('test')
+  })
+})
+
+describe('generateRsaKeyPair', () => {
+  it('2048-bit -> two PEM strings', async () => {
+    const keys = await generateRsaKeyPair(2048)
+    expect(keys.publicKey).toContain('-----BEGIN PUBLIC KEY-----')
+    expect(keys.publicKey).toContain('-----END PUBLIC KEY-----')
+    expect(keys.privateKey).toContain('-----BEGIN PRIVATE KEY-----')
+    expect(keys.privateKey).toContain('-----END PRIVATE KEY-----')
+  })
+  it('1024-bit works', async () => {
+    expect((await generateRsaKeyPair(1024)).publicKey).toBeTruthy()
+  })
+  it('4096-bit works', async () => {
+    expect((await generateRsaKeyPair(4096)).publicKey).toBeTruthy()
+  })
+  it('unique each call', async () => {
+    const k1 = await generateRsaKeyPair(2048)
+    const k2 = await generateRsaKeyPair(2048)
+    expect(k1.publicKey).not.toBe(k2.publicKey)
+  })
+})
+
+describe('importRsaPublicKey', () => {
+  let validPem: string
+  beforeAll(async () => { validPem = (await generateRsaKeyPair(2048)).publicKey })
+  it('import for encryption -> RSA-OAEP key', async () => {
+    const key = await importRsaPublicKey(validPem, true)
+    expect(key.type).toBe('public')
+    expect(key.algorithm.name).toBe('RSA-OAEP')
+  })
+  it('import for verification -> RSA-PSS key', async () => {
+    const key = await importRsaPublicKey(validPem, false)
+    expect(key.type).toBe('public')
+    expect(key.algorithm.name).toBe('RSA-PSS')
+  })
+  it('rejects invalid PEM', async () => {
+    await expect(importRsaPublicKey('not a key', true)).rejects.toThrow(/Key format error/)
+  })
+  it('rejects empty string', async () => {
+    await expect(importRsaPublicKey('', true)).rejects.toThrow(/Key format error/)
+  })
+})
+
+describe('importRsaPrivateKey', () => {
+  let validPem: string
+  beforeAll(async () => { validPem = (await generateRsaKeyPair(2048)).privateKey })
+  it('imports valid PEM', async () => {
+    const key = await importRsaPrivateKey(validPem)
+    expect(key.type).toBe('private')
+  })
+  it('rejects public key as private', async () => {
+    const pub = (await generateRsaKeyPair(2048)).publicKey
+    await expect(importRsaPrivateKey(pub)).rejects.toThrow(/Key format error/)
+  })
+})
+
+describe('getRsaMaxPayload', () => {
+  it('OAEP-SHA256 2048-bit -> 190', () => {
+    expect(getRsaMaxPayload(2048, 'OAEP-SHA256')).toBe(190)
+  })
+  it('OAEP-SHA-1 2048-bit -> 214', () => {
+    expect(getRsaMaxPayload(2048, 'OAEP-SHA-1')).toBe(214)
+  })
+  it('OAEP-SHA-512 2048-bit -> 126', () => {
+    expect(getRsaMaxPayload(2048, 'OAEP-SHA-512')).toBe(126)
+  })
+  it('PKCS#1 v1.5 2048-bit -> 245', () => {
+    expect(getRsaMaxPayload(2048, 'PKCS#1 v1.5')).toBe(245)
+  })
+  it('scales with key size', () => {
+    expect(getRsaMaxPayload(4096,'PKCS#1 v1.5')).toBeGreaterThan(getRsaMaxPayload(2048,'PKCS#1 v1.5'))
   })
 })
