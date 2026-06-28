@@ -35,6 +35,5 @@ regex = "1"
 tauri-plugin-shell = "2"
 dirs-next = "2"
 tauri-plugin-dialog = "2"
-sha1 = "0.10"
-sha2 = "0.10"
+ring = "0.17"
 

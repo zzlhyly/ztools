@@ -185,38 +185,38 @@ struct HashResults {
 }
 
 /// Hash a file once, computing all 4 algorithms in a single pass.
+/// Uses ring (SHA-NI / ARM crypto) for hardware-accelerated hashing.
 /// Runs on a dedicated blocking thread to avoid freezing the UI.
 #[tauri::command]
 async fn hash_file(path: String) -> Result<HashResults, String> {
     tokio::task::spawn_blocking(move || {
         use std::io::Read;
-        use sha1::{Sha1, Digest};
-        use sha2::{Sha256, Sha384, Sha512};
+        use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA384, SHA512};
 
         let mut file = std::fs::File::open(&path)
             .map_err(|e| format!("Failed to open file: {}", e))?;
         let mut buffer = vec![0u8; 1_048_576]; // 1MB heap buffer
 
-        let mut sha1_hasher = Sha1::new();
-        let mut sha256_hasher = Sha256::new();
-        let mut sha384_hasher = Sha384::new();
-        let mut sha512_hasher = Sha512::new();
+        let mut ctx1 = Context::new(&SHA1_FOR_LEGACY_USE_ONLY);
+        let mut ctx256 = Context::new(&SHA256);
+        let mut ctx384 = Context::new(&SHA384);
+        let mut ctx512 = Context::new(&SHA512);
 
         loop {
             let n = file.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
             if n == 0 { break; }
             let chunk = &buffer[..n];
-            sha1_hasher.update(chunk);
-            sha256_hasher.update(chunk);
-            sha384_hasher.update(chunk);
-            sha512_hasher.update(chunk);
+            ctx1.update(chunk);
+            ctx256.update(chunk);
+            ctx384.update(chunk);
+            ctx512.update(chunk);
         }
 
         Ok(HashResults {
-            sha1: format!("{:x}", sha1_hasher.finalize()),
-            sha256: format!("{:x}", sha256_hasher.finalize()),
-            sha384: format!("{:x}", sha384_hasher.finalize()),
-            sha512: format!("{:x}", sha512_hasher.finalize()),
+            sha1: hex::encode(ctx1.finish().as_ref()),
+            sha256: hex::encode(ctx256.finish().as_ref()),
+            sha384: hex::encode(ctx384.finish().as_ref()),
+            sha512: hex::encode(ctx512.finish().as_ref()),
         })
     })
     .await
