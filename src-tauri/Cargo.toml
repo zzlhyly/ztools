@@ -36,5 +36,4 @@ tauri-plugin-shell = "2"
 dirs-next = "2"
 tauri-plugin-dialog = "2"
 ring = "0.17"
-memmap2 = "0.9"
 

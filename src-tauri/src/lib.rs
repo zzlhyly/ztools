@@ -184,43 +184,61 @@ struct HashResults {
     sha512: String,
 }
 
-/// Hash a file using memory-mapped I/O + ring (SHA-NI) + 4 threads.
-/// mmap avoids disk I/O duplication — all threads share the same physical pages.
+/// Hash a file: single reader thread streams chunks via channels to 4 hasher threads.
+/// Each hasher thread uses ring (SHA-NI) for hardware-accelerated hashing.
 #[tauri::command]
 async fn hash_file(path: String) -> Result<HashResults, String> {
     tokio::task::spawn_blocking(move || {
+        use std::io::Read;
+        use std::sync::mpsc::sync_channel;
+        use std::sync::Arc;
         use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA384, SHA512};
-        use memmap2::Mmap;
-        use std::fs::File;
 
-        let file = File::open(&path)
+        type Chunk = Arc<Vec<u8>>;
+
+        let mut file = std::fs::File::open(&path)
             .map_err(|e| format!("Failed to open file: {}", e))?;
-        // Safety: the file is read-only, no concurrent writes
-        let mmap = unsafe { Mmap::map(&file) }
-            .map_err(|e| format!("Failed to mmap: {}", e))?;
-        let data: &[u8] = &mmap;
+
+        let (tx1, rx1) = sync_channel::<Chunk>(8);
+        let (tx2, rx2) = sync_channel::<Chunk>(8);
+        let (tx3, rx3) = sync_channel::<Chunk>(8);
+        let (tx4, rx4) = sync_channel::<Chunk>(8);
 
         std::thread::scope(|s| -> Result<HashResults, String> {
-            let t1 = s.spawn(|| {
+            let t1 = s.spawn(move || {
                 let mut ctx = Context::new(&SHA1_FOR_LEGACY_USE_ONLY);
-                ctx.update(data);
+                while let Ok(chunk) = rx1.recv() { ctx.update(&chunk); }
                 hex::encode(ctx.finish().as_ref())
             });
-            let t256 = s.spawn(|| {
+            let t256 = s.spawn(move || {
                 let mut ctx = Context::new(&SHA256);
-                ctx.update(data);
+                while let Ok(chunk) = rx2.recv() { ctx.update(&chunk); }
                 hex::encode(ctx.finish().as_ref())
             });
-            let t384 = s.spawn(|| {
+            let t384 = s.spawn(move || {
                 let mut ctx = Context::new(&SHA384);
-                ctx.update(data);
+                while let Ok(chunk) = rx3.recv() { ctx.update(&chunk); }
                 hex::encode(ctx.finish().as_ref())
             });
-            let t512 = s.spawn(|| {
+            let t512 = s.spawn(move || {
                 let mut ctx = Context::new(&SHA512);
-                ctx.update(data);
+                while let Ok(chunk) = rx4.recv() { ctx.update(&chunk); }
                 hex::encode(ctx.finish().as_ref())
             });
+
+            // Reader: stream file in 1MB chunks to all 4 hashers
+            let mut buf = vec![0u8; 1_048_576];
+            loop {
+                let n = file.read(&mut buf)
+                    .map_err(|e| format!("Read error: {}", e))?;
+                if n == 0 { break; }
+                let chunk = Arc::new(buf[..n].to_vec());
+                tx1.send(chunk.clone()).ok();
+                tx2.send(chunk.clone()).ok();
+                tx3.send(chunk.clone()).ok();
+                tx4.send(chunk).ok();
+            }
+            drop(tx1); drop(tx2); drop(tx3); drop(tx4);
 
             Ok(HashResults {
                 sha1: t1.join().unwrap(),
