@@ -159,4 +159,12 @@ describe('padZero / unpadZero', () => {
   it('unpad all zeros -> empty', () => {
     expect(unpadZero(new Uint8Array([0,0,0])).length).toBe(0)
   })
+  it('already block-aligned: returns same content', () => {
+    const data = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16])
+    const result = padZero(data, 16)
+    expect(result.length).toBe(16)
+    expect(Array.from(result)).toEqual(Array.from(data))
+    // Must be a different ArrayBuffer (safe copy)
+    expect(result.buffer).not.toBe(data.buffer)
+  })
 })

@@ -52,6 +52,15 @@ export function hexToArrayBuffer(hex: string): ArrayBuffer {
   return bytes.buffer
 }
 
+/**
+ * Detect if a string is HEX, Base64, or plain text.
+ * Priority: even-length all-hex strings (including short ones like 'abcd') → hex;
+ * strings matching base64 charset with uppercase/digit/special → base64;
+ * everything else → text.
+ * Note: short lowercase-only hex strings ('cafe', 'beef') are classified as hex,
+ * not base64. Callers should not rely on this function to distinguish
+ * short hex from short base64.
+ */
 export function detectKeyFormat(input: string): 'hex' | 'base64' | 'text' {
   if (input.length === 0) return 'text'
   if (input.length % 2 === 0 && /^[0-9a-fA-F]+$/.test(input)) {
