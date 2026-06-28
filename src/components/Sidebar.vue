@@ -12,6 +12,7 @@ import {
   Regex,
   Palette,
   Hash,
+  Film,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -38,6 +39,7 @@ const tools: ToolItem[] = [
   { path: '/regex', icon: Regex, key: 'regex' },
   { path: '/color', icon: Palette, key: 'color' },
   { path: '/hash', icon: Hash, key: 'hash' },
+  { path: '/m3u8', icon: Film, key: 'm3u8' },
 ]
 
 const searchQuery = ref('')

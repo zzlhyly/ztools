@@ -10,6 +10,7 @@ const routes = [
   { path: '/regex', component: () => import('@/tools/RegexTester.vue') },
   { path: '/color', component: () => import('@/tools/ColorConverter.vue') },
   { path: '/hash', component: () => import('@/tools/HashCalculator.vue') },
+  { path: '/m3u8', component: () => import('@/tools/M3u8Downloader.vue') },
 ]
 
 const router = createRouter({
