@@ -53,16 +53,16 @@ const handleClear = () => {
 
     <template #input>
       <div class="uuid-input-area">
-        <span class="version-label">Version: UUID v4</span>
+        <span class="version-label">UUID v4</span>
       </div>
     </template>
 
     <template #actions>
       <el-button type="primary" :icon="Fingerprint" :loading="isGenerating" @click="handleGenerate">
-        Generate
+        {{ t('common.generate') }}
       </el-button>
       <el-button :icon="Copy" @click="handleCopyAll">
-        Copy All
+        {{ t('common.copyAll') }}
       </el-button>
       <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}

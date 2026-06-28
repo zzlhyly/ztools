@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { generateRsaKeyPair, arrayBufferToHex, base64ToArrayBuffer, CryptoError } from '@/utils/crypto'
 import { copyToClipboard } from '@/utils/clipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
 import { KeyRound } from 'lucide-vue-next'
+
+const { t } = useI18n()
 
 const keySize = ref<1024 | 2048 | 4096>(2048)
 const format = ref<'PEM' | 'DER'>('PEM')
@@ -75,7 +78,7 @@ async function copyPrivate() {
 
     <template #actions>
       <el-button type="primary" :icon="KeyRound" :loading="isGenerating" @click="handleGenerate">
-        Generate
+        {{ t('common.generate') }}
       </el-button>
     </template>
 
@@ -83,8 +86,8 @@ async function copyPrivate() {
       <div class="key-panels">
         <div class="key-panel public-key-panel">
           <div class="key-panel-header">
-            <span class="key-panel-title">Public Key</span>
-            <el-button size="small" @click="copyPublic">Copy</el-button>
+            <span class="key-panel-title">{{ t('common.publicKey') }}</span>
+            <el-button size="small" @click="copyPublic">{{ t('common.copy') }}</el-button>
           </div>
           <div class="key-panel-body">
             <CodeOutput :content="publicKey" />
@@ -92,8 +95,8 @@ async function copyPrivate() {
         </div>
         <div class="key-panel private-key-panel">
           <div class="key-panel-header">
-            <span class="key-panel-title">Private Key</span>
-            <el-button size="small" @click="copyPrivate">Copy</el-button>
+            <span class="key-panel-title">{{ t('common.privateKey') }}</span>
+            <el-button size="small" @click="copyPrivate">{{ t('common.copy') }}</el-button>
           </div>
           <div class="key-panel-body">
             <CodeOutput :content="privateKey" />

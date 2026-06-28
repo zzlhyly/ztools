@@ -167,19 +167,19 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
         />
         <div class="key-iv-row">
           <div class="key-iv-field">
-            <span class="key-iv-label">Key:</span>
-            <el-input v-model="keyHex" placeholder="Hex key" size="small" class="key-iv-input" />
+            <span class="key-iv-label">{{ t('common.key') }}:</span>
+            <el-input v-model="keyHex" :placeholder="t('common.keyHex')" size="small" class="key-iv-input" />
             <el-button :icon="RefreshCw" size="small" @click="handleGenerateKey">
-              Random
+              {{ t('common.random') }}
             </el-button>
           </div>
         </div>
         <div class="key-iv-row">
           <div class="key-iv-field">
-            <span class="key-iv-label">IV:</span>
-            <el-input v-model="ivHex" placeholder="Hex IV (16 bytes)" size="small" class="key-iv-input" />
+            <span class="key-iv-label">{{ t('common.iv') }}:</span>
+            <el-input v-model="ivHex" :placeholder="t('common.ivHex')" size="small" class="key-iv-input" />
             <el-button :icon="RefreshCw" size="small" @click="handleGenerateIv">
-              Random
+              {{ t('common.random') }}
             </el-button>
           </div>
         </div>
@@ -191,10 +191,10 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
 
     <template #actions>
       <el-button type="primary" :icon="Lock" :loading="isProcessing" @click="handleEncrypt">
-        {{ t('common.encode') }}
+        {{ t('common.encrypt') }}
       </el-button>
       <el-button :icon="Unlock" :loading="isProcessing" @click="handleDecrypt">
-        {{ t('common.decode') }}
+        {{ t('common.decrypt') }}
       </el-button>
       <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}

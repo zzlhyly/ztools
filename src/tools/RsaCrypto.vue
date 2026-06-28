@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import {
   rsaEncrypt,
@@ -17,6 +18,8 @@ import ToolTextarea from '@/components/ToolTextarea.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
 import { Lock, Unlock, Trash2, FileSignature, Fingerprint } from 'lucide-vue-next'
 
+const { t } = useI18n()
+
 const input = ref('')
 const publicKey = ref('')
 const privateKey = ref('')
@@ -25,7 +28,7 @@ const signPadding = ref('PSS-SHA-256')
 const outputFormat = ref('Base64')
 const output = ref('')
 const isProcessing = ref(false)
-const lastSignature = ref('')
+const signatureForVerify = ref('')
 const keySize = ref(2048)
 
 const ENCRYPT_PADDINGS = ['PKCS#1 v1.5', 'OAEP-SHA-1', 'OAEP-SHA-256', 'OAEP-SHA-512'] as const
@@ -100,7 +103,7 @@ async function handleSign() {
   try {
     isProcessing.value = true
     const result = await rsaSign(input.value, privateKey.value, signPadding.value)
-    lastSignature.value = result
+    signatureForVerify.value = result
     output.value = outputFormat.value === 'HEX' ? convertToHex(result) : result
     ElMessage.success('Signed')
   } catch (e) {
@@ -112,13 +115,14 @@ async function handleSign() {
 
 async function handleVerify() {
   if (isProcessing.value) return
-  if (!lastSignature.value) {
-    ElMessage.warning('Sign some data first to generate a signature')
+  if (!signatureForVerify.value.trim()) {
+    ElMessage.warning('No signature to verify. Use Private Sign first or paste a signature below.')
     return
   }
   try {
     isProcessing.value = true
-    const valid = await rsaVerify(lastSignature.value, input.value, publicKey.value, signPadding.value)
+    const sig = outputFormat.value === 'HEX' ? convertToHex(signatureForVerify.value) : signatureForVerify.value
+    const valid = await rsaVerify(signatureForVerify.value, input.value, publicKey.value, signPadding.value)
     output.value = valid ? '\u2713 Signature valid' : '\u2717 Signature invalid'
     ElMessage.success(valid ? 'Signature is valid' : 'Signature is invalid')
   } catch (e) {
@@ -141,7 +145,7 @@ const handleClear = () => {
   publicKey.value = ''
   privateKey.value = ''
   output.value = ''
-  lastSignature.value = ''
+  signatureForVerify.value = ''
 }
 
 watch([publicKey, encryptPadding], () => {
@@ -150,7 +154,7 @@ watch([publicKey, encryptPadding], () => {
 </script>
 
 <template>
-  <ToolLayout title="RSA Encrypt/Decrypt/Sign/Verify" output-copyable @copy="handleCopy">
+  <ToolLayout :title="t('tools.rsaCrypto.name')" output-copyable @copy="handleCopy">
     <template #input-actions>
       <el-select v-model="encryptPadding" size="small" style="width: 160px">
         <el-option v-for="p in ENCRYPT_PADDINGS" :key="p" :label="p" :value="p" />
@@ -167,7 +171,7 @@ watch([publicKey, encryptPadding], () => {
       <div class="rsa-input-area">
         <ToolTextarea
           v-model="input"
-          placeholder="Enter data..."
+          :placeholder="t('common.placeholder')"
           submit-hotkey
           @submit="handleEncrypt"
         />
@@ -178,34 +182,42 @@ watch([publicKey, encryptPadding], () => {
           v-model="publicKey"
           type="textarea"
           :rows="4"
-          placeholder="Public Key (PEM)"
+          :placeholder="t('common.publicKey')"
           class="key-input"
         />
         <el-input
           v-model="privateKey"
           type="textarea"
           :rows="4"
-          placeholder="Private Key (PEM)"
+          :placeholder="t('common.privateKey')"
           class="key-input"
         />
+        <div v-if="signatureForVerify" class="signature-row">
+          <label class="signature-label">Signature</label>
+          <el-input
+            v-model="signatureForVerify"
+            :placeholder="t('common.signature')"
+            class="sig-input"
+          />
+        </div>
       </div>
     </template>
 
     <template #actions>
       <el-button type="primary" :icon="Lock" :disabled="encryptDisabled" :loading="isProcessing" @click="handleEncrypt">
-        Public Encrypt
+        {{ t('common.publicEncrypt') }}
       </el-button>
       <el-button :icon="Unlock" :disabled="!privateKey.trim() || !input.trim()" :loading="isProcessing" @click="handleDecrypt">
-        Private Decrypt
+        {{ t('common.privateDecrypt') }}
       </el-button>
       <el-button :icon="FileSignature" :disabled="!privateKey.trim() || !input.trim()" :loading="isProcessing" @click="handleSign">
-        Private Sign
+        {{ t('common.privateSign') }}
       </el-button>
       <el-button :icon="Fingerprint" :disabled="!publicKey.trim() || !input.trim()" :loading="isProcessing" @click="handleVerify">
-        Public Verify
+        {{ t('common.publicVerify') }}
       </el-button>
       <el-button :icon="Trash2" @click="handleClear">
-        Clear
+        {{ t('common.clear') }}
       </el-button>
     </template>
 

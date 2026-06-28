@@ -93,10 +93,10 @@ watch(algorithm, () => {
         />
         <div class="key-row">
           <div class="key-field">
-            <span class="key-label">Secret Key:</span>
+            <span class="key-label">{{ t('common.key') }}:</span>
             <el-input
               v-model="secretKey"
-              placeholder="Secret key (HEX or UTF-8)"
+              :placeholder="t('common.keyPlaceholder')"
               size="small"
               class="key-input"
             />
