@@ -185,38 +185,43 @@ struct HashResults {
 }
 
 /// Hash a file once, computing all 4 algorithms in a single pass.
+/// Runs on a dedicated blocking thread to avoid freezing the UI.
 #[tauri::command]
-fn hash_file(path: String) -> Result<HashResults, String> {
-    use std::io::Read;
-    use sha1::{Sha1, Digest};
-    use sha2::{Sha256, Sha384, Sha512};
+async fn hash_file(path: String) -> Result<HashResults, String> {
+    tokio::task::spawn_blocking(move || {
+        use std::io::Read;
+        use sha1::{Sha1, Digest};
+        use sha2::{Sha256, Sha384, Sha512};
 
-    let file = std::fs::File::open(&path)
-        .map_err(|e| format!("Failed to open file: {}", e))?;
-    let mut reader = std::io::BufReader::new(file);
-    let mut buffer = [0u8; 65536];
+        let file = std::fs::File::open(&path)
+            .map_err(|e| format!("Failed to open file: {}", e))?;
+        let mut reader = std::io::BufReader::new(file);
+        let mut buffer = [0u8; 65536];
 
-    let mut sha1_hasher = Sha1::new();
-    let mut sha256_hasher = Sha256::new();
-    let mut sha384_hasher = Sha384::new();
-    let mut sha512_hasher = Sha512::new();
+        let mut sha1_hasher = Sha1::new();
+        let mut sha256_hasher = Sha256::new();
+        let mut sha384_hasher = Sha384::new();
+        let mut sha512_hasher = Sha512::new();
 
-    loop {
-        let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
-        if n == 0 { break; }
-        let chunk = &buffer[..n];
-        sha1_hasher.update(chunk);
-        sha256_hasher.update(chunk);
-        sha384_hasher.update(chunk);
-        sha512_hasher.update(chunk);
-    }
+        loop {
+            let n = reader.read(&mut buffer).map_err(|e| format!("Read error: {}", e))?;
+            if n == 0 { break; }
+            let chunk = &buffer[..n];
+            sha1_hasher.update(chunk);
+            sha256_hasher.update(chunk);
+            sha384_hasher.update(chunk);
+            sha512_hasher.update(chunk);
+        }
 
-    Ok(HashResults {
-        sha1: format!("{:x}", sha1_hasher.finalize()),
-        sha256: format!("{:x}", sha256_hasher.finalize()),
-        sha384: format!("{:x}", sha384_hasher.finalize()),
-        sha512: format!("{:x}", sha512_hasher.finalize()),
+        Ok(HashResults {
+            sha1: format!("{:x}", sha1_hasher.finalize()),
+            sha256: format!("{:x}", sha256_hasher.finalize()),
+            sha384: format!("{:x}", sha384_hasher.finalize()),
+            sha512: format!("{:x}", sha512_hasher.finalize()),
+        })
     })
+    .await
+    .map_err(|e| format!("Hash task panicked: {}", e))?
 }
 
 #[tauri::command]
