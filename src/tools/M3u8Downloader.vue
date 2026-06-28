@@ -11,6 +11,7 @@ import {
   invokeStartDownload,
   invokeCancelDownload,
   invokeCheckFfmpeg,
+  invokeGetDefaultDownloadDir,
   onDownloadProgress,
   onDownloadComplete,
   onDownloadError,
@@ -18,7 +19,8 @@ import {
   type DownloadConfig,
 } from '@/utils/m3u8'
 import DownloadProgress from '@/components/DownloadProgress.vue'
-import { Download, Trash2, RotateCcw, X, Upload } from 'lucide-vue-next'
+import { Download, Trash2, RotateCcw, X, Upload, FolderOpen, FileSearch } from 'lucide-vue-next'
+import { open } from '@tauri-apps/plugin-dialog'
 
 const { t } = useI18n()
 const store = useM3u8Store()
@@ -69,6 +71,14 @@ onMounted(async () => {
     })
     ElMessage.error(event.error)
   })
+
+  // Set default download directory if not configured
+  if (!store.config.downloadDir) {
+    const dir = await invokeGetDefaultDownloadDir()
+    if (dir) {
+      store.updateConfig({ downloadDir: dir })
+    }
+  }
 })
 
 onUnmounted(() => {
@@ -116,6 +126,20 @@ function handleCurlPaste() {
     store.updateConfig({ headers: { ...store.config.headers, custom: customHeaders } })
   }
   ElMessage.success('Headers extracted from cURL')
+}
+
+async function handleSelectDownloadDir() {
+  const selected = await open({ directory: true, multiple: false })
+  if (selected && typeof selected === 'string') {
+    store.updateConfig({ downloadDir: selected })
+  }
+}
+
+async function handleSelectFfmpegPath() {
+  const selected = await open({ multiple: false, filters: [] })
+  if (selected && typeof selected === 'string') {
+    store.updateConfig({ ffmpegPath: selected })
+  }
 }
 
 async function handleAddTask() {
@@ -329,12 +353,16 @@ onUnmounted(() => {
       </div>
 
       <div class="input-actions">
-        <el-button text size="small" @click="showCurlInput = !showCurlInput">
-          {{ t('common.curlPaste') }}
-        </el-button>
-        <el-button text size="small" @click="showHeadersConfig = !showHeadersConfig">
-          {{ t('common.headers') }}
-        </el-button>
+        <el-tooltip content="从浏览器 DevTools 复制 cURL 命令并粘贴，自动提取 URL 和 Headers" placement="bottom">
+          <el-button text size="small" @click="showCurlInput = !showCurlInput">
+            {{ t('common.curlPaste') }}
+          </el-button>
+        </el-tooltip>
+        <el-tooltip content="配置请求头（Referer、Cookie 等）" placement="bottom">
+          <el-button text size="small" @click="showHeadersConfig = !showHeadersConfig">
+            {{ t('common.headers') }}
+          </el-button>
+        </el-tooltip>
       </div>
 
       <div v-if="showCurlInput" class="curl-section">
@@ -350,79 +378,77 @@ onUnmounted(() => {
       </div>
 
       <div v-if="showHeadersConfig" class="headers-config">
-        <el-input
-          :model-value="store.config.headers.referer"
-          placeholder="Referer"
-          size="small"
-          @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, referer: v } })"
-        />
-        <el-input
-          :model-value="store.config.headers.cookie"
-          placeholder="Cookie"
-          size="small"
-          @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, cookie: v } })"
-        />
-        <div
-          v-for="(item, index) in store.config.headers.custom"
-          :key="index"
-          class="custom-header-row"
-        >
-          <el-input
-            :model-value="item.key"
-            placeholder="Header Name"
-            size="small"
-            @update:model-value="(v: string) => {
-              const custom = [...store.config.headers.custom]
-              custom[index] = { key: v, value: custom[index]?.value || '' }
-              store.updateConfig({ headers: { ...store.config.headers, custom } })
-            }"
-          />
-          <el-input
-            :model-value="item.value"
-            placeholder="Header Value"
-            size="small"
-            @update:model-value="(v: string) => {
-              const custom = [...store.config.headers.custom]
-              custom[index] = { key: custom[index]?.key || '', value: v }
-              store.updateConfig({ headers: { ...store.config.headers, custom } })
-            }"
-          />
-          <el-button
-            :icon="X"
-            size="small"
-            circle
-            @click="() => {
-              const custom = store.config.headers.custom.filter((_: any, i: number) => i !== index)
-              store.updateConfig({ headers: { ...store.config.headers, custom } })
-            }"
-          />
-        </div>
-        <el-button
-          size="small"
-          @click="() => store.updateConfig({
-            headers: { ...store.config.headers, custom: [...store.config.headers.custom, { key: '', value: '' }] }
-          })"
-        >
-          + Add Header
+        <table class="headers-table">
+          <thead>
+            <tr>
+              <th class="col-key">Key</th>
+              <th class="col-value">Value</th>
+              <th class="col-action"></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><el-input :model-value="store.config.headers.referer" placeholder="Referer" size="small"
+                @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, referer: v } })" /></td>
+              <td><span class="header-value-preview">{{ store.config.headers.referer || '—' }}</span></td>
+              <td></td>
+            </tr>
+            <tr>
+              <td><el-input :model-value="store.config.headers.cookie" placeholder="Cookie" size="small"
+                @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, cookie: v } })" /></td>
+              <td><span class="header-value-preview">{{ store.config.headers.cookie ? '••••••' : '—' }}</span></td>
+              <td></td>
+            </tr>
+            <tr v-for="(item, index) in store.config.headers.custom" :key="index">
+              <td>
+                <el-input :model-value="item.key" placeholder="Header Name" size="small"
+                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: v, value: c[index]?.value || '' }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }" />
+              </td>
+              <td>
+                <el-input :model-value="item.value" placeholder="Header Value" size="small"
+                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: c[index]?.key || '', value: v }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }" />
+              </td>
+              <td>
+                <el-button :icon="X" size="small" circle
+                  @click="() => { const c = store.config.headers.custom.filter((_: any, i: number) => i !== index); store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <el-button size="small" style="margin-top: 8px"
+          @click="() => store.updateConfig({ headers: { ...store.config.headers, custom: [...store.config.headers.custom, { key: '', value: '' }] } })">
+          + 添加 Header
         </el-button>
       </div>
 
       <div class="config-row">
         <div class="config-item">
           <label>{{ t('common.downloadDir') }}</label>
-          <el-input
-            :model-value="store.config.downloadDir"
-            size="small"
-            @update:model-value="(v: string) => store.updateConfig({ downloadDir: v })"
-          />
+          <div class="path-input-row">
+            <el-input
+              :model-value="store.config.downloadDir"
+              size="small"
+              placeholder="选择下载目录"
+              @update:model-value="(v: string) => store.updateConfig({ downloadDir: v })"
+            />
+            <el-tooltip content="选择文件夹" placement="top">
+              <el-button :icon="FolderOpen" size="small" @click="handleSelectDownloadDir" />
+            </el-tooltip>
+          </div>
         </div>
         <div class="config-item">
           <label>{{ t('common.ffmpegPath') }}</label>
-          <el-input
-            :model-value="store.config.ffmpegPath"
-            size="small"
-            @update:model-value="(v: string) => store.updateConfig({ ffmpegPath: v })"
-          />
+          <div class="path-input-row">
+            <el-input
+              :model-value="store.config.ffmpegPath"
+              size="small"
+              placeholder="ffmpeg 路径"
+              @update:model-value="(v: string) => store.updateConfig({ ffmpegPath: v })"
+            />
+            <el-tooltip content="选择 FFmpeg 可执行文件" placement="top">
+              <el-button :icon="FileSearch" size="small" @click="handleSelectFfmpegPath" />
+            </el-tooltip>
+          </div>
         </div>
       </div>
     </div>
@@ -551,10 +577,41 @@ onUnmounted(() => {
   gap: var(--spacing-sm, 8px);
 }
 
-.custom-header-row {
+.headers-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.headers-table th {
+  text-align: left;
+  font-size: var(--font-size-xs, 12px);
+  font-weight: 600;
+  color: var(--text-color-secondary, #909399);
+  padding: 6px 8px 4px;
+  border-bottom: 1px solid var(--border-color-light, #e4e7ed);
+}
+
+.headers-table td {
+  padding: 4px 8px;
+  vertical-align: middle;
+}
+
+.col-key { width: 35%; }
+.col-value { flex: 1; }
+.col-action { width: 40px; }
+
+.path-input-row {
   display: flex;
-  gap: var(--spacing-xs, 4px);
+  gap: 4px;
   align-items: center;
+}
+
+.path-input-row .el-input { flex: 1; }
+
+.header-value-preview {
+  font-size: var(--font-size-xs, 12px);
+  color: var(--text-color-placeholder, #c0c4cc);
+  padding: 0 8px;
 }
 
 .config-row {
