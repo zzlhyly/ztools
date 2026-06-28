@@ -14,6 +14,7 @@
 - **正则表达式测试** - 支持 g/i/m 标志的正则表达式测试
 - **颜色转换** - HEX、RGB、HSL 颜色格式互转
 - **哈希计算** - SHA-1、SHA-256、SHA-384、SHA-512 哈希计算
+- **M3U8 下载器** - 下载 M3U8 视频并转换为 MP4，支持 AES-128 解密
 
 ## 技术栈
 
@@ -29,6 +30,7 @@
 - [Node.js](https://nodejs.org/) v16+
 - [npm](https://www.npmjs.com/) v7+
 - [Rust](https://www.rust-lang.org/tools/install)（最新稳定版）
+- [FFmpeg](https://ffmpeg.org/)（M3U8 下载器需要，需在 PATH 中或在应用内配置路径）
 
 ## 安装
 
@@ -80,13 +82,15 @@ ztools/
 │   │   ├── TimestampConverter.vue
 │   │   ├── RegexTester.vue
 │   │   ├── ColorConverter.vue
-│   │   └── HashCalculator.vue
+│   │   ├── HashCalculator.vue
+│   │   └── M3u8Downloader.vue
 │   ├── stores/              # Pinia 状态管理
 │   ├── router/              # Vue Router 路由
 │   ├── i18n/                # 国际化翻译
 │   ├── utils/               # 工具函数
 │   └── styles/              # CSS 变量和全局样式
 ├── src-tauri/               # Tauri 后端（Rust）
+│   └── src/m3u8/            # M3U8 模块（解析、解密、下载、转码）
 ├── docs/                    # 文档
 └── package.json
 ```

@@ -14,6 +14,7 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - **Regex Tester** - Test regular expressions with flags support
 - **Color Converter** - Convert between HEX, RGB, and HSL colors
 - **Hash Calculator** - Calculate SHA-1, SHA-256, SHA-384, SHA-512 hashes
+- **M3U8 Downloader** - Download M3U8 videos and convert to MP4 with AES-128 decryption support
 
 ## Tech Stack
 
@@ -29,6 +30,7 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - [Node.js](https://nodejs.org/) v16+
 - [npm](https://www.npmjs.com/) v7+
 - [Rust](https://www.rust-lang.org/tools/install) (latest stable)
+- [FFmpeg](https://ffmpeg.org/) (required for M3U8 Downloader — must be in PATH or configured in-app)
 
 ## Installation
 
@@ -80,13 +82,15 @@ ztools/
 │   │   ├── TimestampConverter.vue
 │   │   ├── RegexTester.vue
 │   │   ├── ColorConverter.vue
-│   │   └── HashCalculator.vue
+│   │   ├── HashCalculator.vue
+│   │   └── M3u8Downloader.vue
 │   ├── stores/              # Pinia stores
 │   ├── router/              # Vue Router
 │   ├── i18n/                # Translations
 │   ├── utils/               # Utility functions
 │   └── styles/              # CSS variables & global styles
 ├── src-tauri/               # Tauri backend (Rust)
+│   └── src/m3u8/            # M3U8 module (playlist, decrypt, downloader, converter)
 ├── docs/                    # Documentation
 └── package.json
 ```
