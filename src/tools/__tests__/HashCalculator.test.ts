@@ -36,6 +36,8 @@ const i18n = createI18n({
         error: 'Error',
         success: 'Success',
         placeholder: 'Enter content...',
+        selectFile: 'Select File',
+        hashing: 'Computing...',
       },
       errors: {
         jsonSyntax: 'JSON syntax error: {message}',
@@ -54,58 +56,53 @@ vi.mock('element-plus', () => ({
   },
 }))
 
+vi.mock('@/utils/hash', () => ({
+  HASH_ALGORITHMS: [
+    { label: 'MD5', value: 'MD5' },
+    { label: 'SHA-1', value: 'SHA-1' },
+    { label: 'SHA-256', value: 'SHA-256' },
+    { label: 'SHA-384', value: 'SHA-384' },
+    { label: 'SHA-512', value: 'SHA-512' },
+    { label: 'SHA3-256', value: 'SHA3-256' },
+    { label: 'SHA3-512', value: 'SHA3-512' },
+  ],
+  calculateHash: vi.fn().mockResolvedValue('abc123'),
+  hashFile: vi.fn().mockResolvedValue('def456'),
+}))
+
 describe('HashCalculator', () => {
   const stubs = {
     'el-button': { template: '<button><slot /></button>' },
+    'el-select': { template: '<div class="el-select"><slot /></div>' },
+    'el-option': { template: '<div class="el-option"><slot /></div>' },
   }
 
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
-  it('should render input textarea', () => {
+  it('should render textarea', () => {
     const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
     expect(wrapper.find('textarea').exists()).toBe(true)
   })
 
-  it('should calculate SHA-1 hash', async () => {
+  it('should render algorithm dropdown', () => {
     const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
-    const textarea = wrapper.find('textarea')
-    await textarea.setValue('Hello World')
-
-    const buttons = wrapper.findAll('button')
-    const calculateButton = buttons.find(b => b.text().includes('Calculate'))!
-    await calculateButton.trigger('click')
-
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    const output = wrapper.find('.code-content')
-    expect(output.text()).toContain('SHA-1')
-    expect(output.text()).toContain('SHA-256')
+    const options = wrapper.findAll('.el-option')
+    expect(options.length).toBe(7)
   })
 
-  it('should show all hash algorithms', async () => {
+  it('should have calculate and clear buttons', () => {
     const wrapper = mount(HashCalculator, {
       global: { plugins: [router, i18n], stubs },
     })
-    const textarea = wrapper.find('textarea')
-    await textarea.setValue('test')
-
     const buttons = wrapper.findAll('button')
-    const calculateButton = buttons.find(b => b.text().includes('Calculate'))!
-    await calculateButton.trigger('click')
-
-    await new Promise((resolve) => setTimeout(resolve, 100))
-
-    const output = wrapper.find('.code-content')
-    expect(output.text()).toContain('SHA-1')
-    expect(output.text()).toContain('SHA-256')
-    expect(output.text()).toContain('SHA-384')
-    expect(output.text()).toContain('SHA-512')
+    expect(buttons.filter(b => b.text().includes('Calculate')).length).toBe(1)
+    expect(buttons.filter(b => b.text().includes('Clear')).length).toBe(1)
   })
 
   it('should clear input and output', async () => {

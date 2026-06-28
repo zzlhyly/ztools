@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { calculateHash, hashFile } from '@/utils/hash'
+import { HASH_ALGORITHMS, type HashAlgorithm, calculateHash, hashFile } from '@/utils/hash'
 import { copyToClipboard } from '@/utils/clipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import ToolTextarea from '@/components/ToolTextarea.vue'
@@ -16,12 +16,13 @@ const input = ref('')
 const output = ref('')
 const selectedFile = ref('')
 const isHashing = ref(false)
+const selectedAlgorithm = ref<HashAlgorithm>('SHA-256')
+const lastSucceeded = ref(false)
 
 const handleSelectFile = async () => {
   const file = await open({ multiple: false, filters: [{ name: 'All Files', extensions: ['*'] }] })
   if (file && typeof file === 'string') {
     selectedFile.value = file
-    // Extract filename for display
     const name = file.split(/[/\\]/).pop() || file
     input.value = name
   }
@@ -40,26 +41,26 @@ const handleCalculate = async () => {
     output.value = ''
 
     if (selectedFile.value) {
-      // File mode — stream hash via Rust
-      const result = await hashFile(selectedFile.value)
-
-      output.value = `SHA-1:\n${result.sha1}\n\nSHA-256:\n${result.sha256}\n\nSHA-384:\n${result.sha384}\n\nSHA-512:\n${result.sha512}`
+      output.value = await hashFile(selectedFile.value, selectedAlgorithm.value)
     } else {
-      // Text mode
-      const sha1 = await calculateHash(input.value, 'SHA-1')
-      const sha256 = await calculateHash(input.value, 'SHA-256')
-      const sha384 = await calculateHash(input.value, 'SHA-384')
-      const sha512 = await calculateHash(input.value, 'SHA-512')
-
-      output.value = `SHA-1:\n${sha1}\n\nSHA-256:\n${sha256}\n\nSHA-384:\n${sha384}\n\nSHA-512:\n${sha512}`
+      output.value = await calculateHash(input.value, selectedAlgorithm.value)
     }
+
+    lastSucceeded.value = true
     ElMessage.success(t('common.success'))
   } catch {
+    lastSucceeded.value = false
     ElMessage.error(t('errors.invalidInput'))
   } finally {
     isHashing.value = false
   }
 }
+
+watch(selectedAlgorithm, () => {
+  if (lastSucceeded.value && (input.value || selectedFile.value)) {
+    handleCalculate()
+  }
+})
 
 const handleCopy = async () => {
   if (output.value) {
@@ -77,6 +78,20 @@ const handleClear = () => {
 
 <template>
   <ToolLayout :title="t('tools.hash.name')" output-copyable @copy="handleCopy">
+    <template #input-actions>
+      <el-select v-model="selectedAlgorithm" size="small" style="width: 140px">
+        <el-option
+          v-for="alg in HASH_ALGORITHMS"
+          :key="alg.value"
+          :label="alg.label"
+          :value="alg.value"
+        />
+      </el-select>
+      <el-button :icon="FolderOpen" size="small" @click="handleSelectFile">
+        {{ t('common.selectFile') }}
+      </el-button>
+    </template>
+
     <template #input>
       <div class="hash-input-area">
         <ToolTextarea
@@ -89,11 +104,6 @@ const handleClear = () => {
         <div v-if="selectedFile" class="file-indicator">
           <span class="file-path">{{ selectedFile }}</span>
           <el-button :icon="X" size="small" circle @click="handleClearFile" />
-        </div>
-        <div v-else class="file-select-row">
-          <el-button :icon="FolderOpen" @click="handleSelectFile">
-            {{ t('common.selectFile') }}
-          </el-button>
         </div>
       </div>
     </template>
@@ -119,11 +129,6 @@ const handleClear = () => {
   flex-direction: column;
   gap: var(--spacing-sm, 8px);
   height: 100%;
-}
-
-.file-select-row {
-  display: flex;
-  gap: var(--spacing-sm, 8px);
 }
 
 .file-indicator {
