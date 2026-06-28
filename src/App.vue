@@ -16,7 +16,11 @@ const { t } = useI18n()
     <div class="app-content">
       <Sidebar />
       <main class="main-content">
-        <router-view />
+        <router-view v-slot="{ Component }">
+          <keep-alive>
+            <component :is="Component" />
+          </keep-alive>
+        </router-view>
       </main>
     </div>
   </div>
