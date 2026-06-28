@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { HASH_ALGORITHMS, calculateHash, calculateMd5, sha1, sha256, sha384, sha512, hashFile } from '../hash'
+import { HASH_ALGORITHMS, calculateHash, calculateMd5, sha1, sha256 } from '../hash'
 
 describe('HASH_ALGORITHMS', () => {
   it('contains 7 algorithms', () => {

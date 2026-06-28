@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll } from 'vitest'
 import {
   CryptoError, arrayBufferToBase64, base64ToArrayBuffer,
   arrayBufferToHex, hexToArrayBuffer, detectKeyFormat,

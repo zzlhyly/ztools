@@ -121,7 +121,6 @@ async function handleVerify() {
   }
   try {
     isProcessing.value = true
-    const sig = outputFormat.value === 'HEX' ? convertToHex(signatureForVerify.value) : signatureForVerify.value
     const valid = await rsaVerify(signatureForVerify.value, input.value, publicKey.value, signPadding.value)
     output.value = valid ? '\u2713 Signature valid' : '\u2717 Signature invalid'
     ElMessage.success(valid ? 'Signature is valid' : 'Signature is invalid')
