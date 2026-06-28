@@ -1,3 +1,7 @@
+import { invoke } from '@tauri-apps/api/core'
+import { listen, type UnlistenFn } from '@tauri-apps/api/event'
+import type { ProgressEvent, M3u8QualityOption } from '@/stores/m3u8'
+
 /**
  * Parse a cURL command string into URL and headers.
  * Returns null if the input is not a cURL command.
@@ -31,4 +35,103 @@ export function parseCurlCommand(
   }
 
   return { url, headers }
+}
+
+// ---- Tauri command wrappers ----
+
+export interface FetchPageResult {
+  html: string
+  final_url: string
+}
+
+export async function invokeFetchPage(
+  url: string,
+  headers: Record<string, string>,
+): Promise<FetchPageResult> {
+  return invoke<FetchPageResult>('fetch_page', { url, headers })
+}
+
+export interface M3u8Info {
+  url: string
+  label: string
+  qualities: M3u8QualityOption[]
+}
+
+export async function invokeParseM3u8Urls(
+  html: string,
+  baseUrl: string,
+): Promise<M3u8Info[]> {
+  return invoke<M3u8Info[]>('parse_m3u8_urls', { html, baseUrl })
+}
+
+export interface ParseM3u8Result {
+  playlist_type: 'master' | 'media'
+  qualities: M3u8QualityOption[]
+  segment_count: number
+  has_encryption: boolean
+}
+
+export async function invokeParseM3u8(
+  url: string,
+  headers: Record<string, string>,
+): Promise<ParseM3u8Result> {
+  return invoke<ParseM3u8Result>('parse_m3u8', { url, headers })
+}
+
+export interface DownloadConfig {
+  task_id: string
+  m3u8_url: string
+  output_dir: string
+  filename: string
+  headers: Record<string, string>
+  ffmpeg_path: string
+  max_segment_concurrent: number
+}
+
+export async function invokeStartDownload(config: DownloadConfig): Promise<string> {
+  return invoke<string>('start_download', { config })
+}
+
+export async function invokeCancelDownload(taskId: string): Promise<void> {
+  return invoke('cancel_download', { taskId })
+}
+
+export async function invokeCheckFfmpeg(ffmpegPath: string): Promise<boolean> {
+  return invoke<boolean>('check_ffmpeg', { ffmpegPath })
+}
+
+// ---- Event listeners ----
+
+export async function onDownloadProgress(
+  callback: (event: ProgressEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<ProgressEvent>('download-progress', (event) => {
+    callback(event.payload)
+  })
+}
+
+export interface DownloadCompleteEvent {
+  task_id: string
+  output_path: string
+}
+
+export async function onDownloadComplete(
+  callback: (event: DownloadCompleteEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<DownloadCompleteEvent>('download-complete', (event) => {
+    callback(event.payload)
+  })
+}
+
+export interface DownloadErrorEvent {
+  task_id: string
+  error: string
+}
+
+export async function onDownloadError(
+  callback: (event: DownloadErrorEvent) => void,
+): Promise<UnlistenFn> {
+  return listen<DownloadErrorEvent>('download-error', (event) => {
+    callback(event.payload)
+  })
 }
