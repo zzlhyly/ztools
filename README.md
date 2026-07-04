@@ -28,7 +28,9 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - **Build Tool**: Vite 6
 - **State Management**: Pinia
 - **Internationalization**: vue-i18n (中文/English)
-- **Testing**: Vitest
+- **Testing**: Vitest + Rust unit tests
+- **Linting/Formatting**: vue-tsc (type checking) + Prettier (formatting)
+- **CI**: GitHub Actions (format-check, type-check, tests, build + Rust check/test)
 
 ## Prerequisites
 
@@ -54,11 +56,20 @@ npm install
 # Start development server
 npm run tauri dev
 
-# Run tests
+# Run tests (watch mode)
 npm run test
+
+# Run tests (single run)
+npm run test:run
 
 # Run tests with coverage
 npm run test:coverage
+
+# Format code
+npm run format
+
+# Check formatting
+npm run format:check
 ```
 
 ## Building
@@ -79,6 +90,8 @@ ztools/
 │   │   ├── TitleBar.vue     # Custom title bar
 │   │   ├── Sidebar.vue      # Navigation sidebar
 │   │   └── ToolLayout.vue   # Tool page layout
+│   ├── composables/         # Shared composables
+│   │   └── useClipboard.ts  # Clipboard copy with notification
 │   ├── tools/               # Tool pages
 │   │   ├── JsonFormatter.vue
 │   │   ├── XmlFormatter.vue
@@ -97,11 +110,15 @@ ztools/
 │   ├── stores/              # Pinia stores
 │   ├── router/              # Vue Router
 │   ├── i18n/                # Translations
-│   ├── utils/               # Utility functions
-│   └── styles/              # CSS variables & global styles
+│   ├── utils/               # Utility functions (clipboard, hash, crypto, errors, etc.)
+│   ├── styles/              # CSS variables & global styles
+│   └── test-setup.ts        # Global test mocks
+├── .github/workflows/       # CI pipeline
+│   └── ci.yml               # format-check → vue-tsc → vitest → build + cargo check/test
 ├── src-tauri/               # Tauri backend (Rust)
 │   └── src/m3u8/            # M3U8 module (playlist, decrypt, downloader, converter)
-├── docs/                    # Documentation
+├── .prettierrc.json         # Code formatting rules
+├── .git-blame-ignore-revs   # Ignore formatting commits in git blame
 └── package.json
 ```
 
@@ -111,12 +128,22 @@ ztools/
 # Run all tests
 npm run test
 
-# Run tests in watch mode
-npm run test:watch
+# Run tests (single run)
+npm run test:run
 
 # Run tests with coverage
 npm run test:coverage
+
+# Run Rust tests
+cargo test --lib --manifest-path src-tauri/Cargo.toml
 ```
+
+## CI/CD
+
+Every push and pull request to `main` runs:
+
+- **Frontend**: format-check → type-check (`vue-tsc`) → tests (`vitest`) → build (`vite`)
+- **Backend**: compile check (`cargo check`) → tests (`cargo test --lib`)
 
 ## Internationalization
 

@@ -28,7 +28,9 @@
 - **构建工具**：Vite 6
 - **状态管理**：Pinia
 - **国际化**：vue-i18n（中文/English）
-- **测试**：Vitest
+- **测试**：Vitest + Rust 单元测试
+- **代码检查/格式化**：vue-tsc（类型检查）+ Prettier（格式化）
+- **CI**：GitHub Actions（格式检查 → 类型检查 → 测试 → 构建 + Rust 编译检查/测试）
 
 ## 环境要求
 
@@ -54,11 +56,20 @@ npm install
 # 启动开发服务器
 npm run tauri dev
 
-# 运行测试
+# 运行测试（监听模式）
 npm run test
+
+# 运行测试（单次）
+npm run test:run
 
 # 运行测试并生成覆盖率报告
 npm run test:coverage
+
+# 格式化代码
+npm run format
+
+# 检查格式
+npm run format:check
 ```
 
 ## 构建
@@ -79,6 +90,8 @@ ztools/
 │   │   ├── TitleBar.vue     # 自定义标题栏
 │   │   ├── Sidebar.vue      # 侧边栏导航
 │   │   └── ToolLayout.vue   # 工具页面布局
+│   ├── composables/         # 共享 composable
+│   │   └── useClipboard.ts  # 剪贴板复制（含成功提示）
 │   ├── tools/               # 工具页面
 │   │   ├── JsonFormatter.vue
 │   │   ├── XmlFormatter.vue
@@ -97,11 +110,15 @@ ztools/
 │   ├── stores/              # Pinia 状态管理
 │   ├── router/              # Vue Router 路由
 │   ├── i18n/                # 国际化翻译
-│   ├── utils/               # 工具函数
-│   └── styles/              # CSS 变量和全局样式
+│   ├── utils/               # 工具函数（clipboard, hash, crypto, errors 等）
+│   ├── styles/              # CSS 变量和全局样式
+│   └── test-setup.ts        # 全局测试 Mock
+├── .github/workflows/       # CI 流水线
+│   └── ci.yml               # 格式检查 → 类型检查 → 测试 → 构建 + Rust 编译/测试
 ├── src-tauri/               # Tauri 后端（Rust）
 │   └── src/m3u8/            # M3U8 模块（解析、解密、下载、转码）
-├── docs/                    # 文档
+├── .prettierrc.json         # 代码格式化规则
+├── .git-blame-ignore-revs   # git blame 忽略格式化提交
 └── package.json
 ```
 
@@ -111,12 +128,22 @@ ztools/
 # 运行所有测试
 npm run test
 
-# 监听模式运行测试
-npm run test:watch
+# 单次运行
+npm run test:run
 
 # 运行测试并生成覆盖率报告
 npm run test:coverage
+
+# Rust 测试
+cargo test --lib --manifest-path src-tauri/Cargo.toml
 ```
+
+## CI/CD
+
+每次推送到 `main` 或提交 PR 时自动运行：
+
+- **前端**：格式检查 → 类型检查 (`vue-tsc`) → 测试 (`vitest`) → 构建 (`vite`)
+- **后端**：编译检查 (`cargo check`) → 测试 (`cargo test --lib`)
 
 ## 国际化
 
