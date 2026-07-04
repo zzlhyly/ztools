@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { Braces, Trash2 } from 'lucide-vue-next'
 import { formatJson, minifyJson, validateJson } from '@/utils/formatters'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import ToolTextarea from '@/components/ToolTextarea.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
@@ -45,12 +45,7 @@ const handleMinify = () => {
   }
 }
 
-const handleCopy = async () => {
-  if (output.value) {
-    await copyToClipboard(output.value)
-    ElMessage.success(t('common.copied'))
-  }
-}
+const handleCopy = useClipboard(output)
 
 const handleClear = () => {
   input.value = ''

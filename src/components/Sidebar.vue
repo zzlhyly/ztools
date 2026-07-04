@@ -58,7 +58,7 @@ const searchInputRef = ref<{ focus: () => void } | null>(null)
 const filteredTools = computed(() => {
   if (!searchQuery.value.trim()) return tools
   const query = searchQuery.value.toLowerCase()
-  return tools.filter(tool => {
+  return tools.filter((tool) => {
     const name = t(`tools.${tool.key}.name`).toLowerCase()
     const desc = t(`tools.${tool.key}.description`).toLowerCase()
     return name.includes(query) || desc.includes(query)
@@ -67,7 +67,7 @@ const filteredTools = computed(() => {
 
 const recentTools = computed(() => {
   return appStore.recentTools
-    .map(path => tools.find(t => t.path === path))
+    .map((path) => tools.find((t) => t.path === path))
     .filter((t): t is ToolItem => !!t)
     .slice(0, 5)
 })
@@ -79,8 +79,9 @@ const navigateTo = (path: string) => {
   appStore.addRecentTool(path)
 }
 
-const handleKeydown = (e: KeyboardEvent) => {
-  if (e.key === 'Enter' && filteredTools.value.length > 0) {
+const handleKeydown = (e: Event) => {
+  if (!(e instanceof KeyboardEvent) || e.key !== 'Enter') return
+  if (filteredTools.value.length > 0) {
     navigateTo(filteredTools.value[0].path)
     searchQuery.value = ''
   }

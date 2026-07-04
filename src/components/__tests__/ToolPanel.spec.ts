@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
 import ToolPanel from '../ToolPanel.vue'
 
@@ -9,7 +9,6 @@ describe('ToolPanel', () => {
       slots: { default: '<textarea>hello</textarea>' },
       global: {
         mocks: { $t: (key: string) => key },
-        stubs: { 'el-button': { template: '<button><slot /></button>' } },
       },
     })
 
@@ -24,7 +23,6 @@ describe('ToolPanel', () => {
         mocks: {
           $t: (key: string) => key,
         },
-        stubs: { 'el-button': { template: '<button><slot /></button>' } },
       },
     })
 
@@ -38,7 +36,6 @@ describe('ToolPanel', () => {
         mocks: {
           $t: (key: string) => key,
         },
-        stubs: { 'el-button': { template: '<button><slot /></button>' } },
       },
     })
 

@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - run: npm ci
+
+      - name: Format check (non-blocking)
+        run: npx prettier --check "src/**/*.{ts,vue,css}"
+        continue-on-error: true
+
+      - name: Type check
+        run: npx vue-tsc --noEmit
+
+      - name: Test
+        run: npm run test:run
+
+      - name: Build (Vite)
+        run: npx vite build
+
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Cargo check
+        run: cargo check --manifest-path src-tauri/Cargo.toml
+
+      - name: Cargo test
+        run: cargo test --lib --manifest-path src-tauri/Cargo.toml

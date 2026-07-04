@@ -3,11 +3,14 @@ import { ref, onMounted } from 'vue'
 import { Minus, X, Maximize2, Wrench } from 'lucide-vue-next'
 import { minimizeWindow, maximizeWindow, closeWindow } from '@/utils/window'
 
-const props = withDefaults(defineProps<{
-  title?: string
-}>(), {
-  title: 'ztools',
-})
+withDefaults(
+  defineProps<{
+    title?: string
+  }>(),
+  {
+    title: 'ztools',
+  },
+)
 
 const isMac = ref(false)
 

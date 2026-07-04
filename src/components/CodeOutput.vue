@@ -5,7 +5,7 @@ interface Props {
   language?: 'json' | 'xml' | 'text'
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   error: '',
   language: 'text',
 })
@@ -13,13 +13,7 @@ const props = withDefaults(defineProps<Props>(), {
 
 <template>
   <div class="code-output">
-    <el-alert
-      v-if="error"
-      :title="error"
-      type="error"
-      :closable="false"
-      show-icon
-    />
+    <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
     <div v-else-if="content" class="code-content">
       <pre><code>{{ content }}</code></pre>
     </div>

@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import ColorConverter from '../ColorConverter.vue'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -13,67 +14,24 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      tools: {
-        color: { name: 'Color Converter' },
-      },
-      common: {
-        input: 'Input',
-        output: 'Output',
-        format: 'Format',
-        minify: 'Minify',
-        encode: 'Encode',
-        decode: 'Decode',
-        copy: 'Copy',
-        paste: 'Paste',
-        clear: 'Clear',
-        swap: 'Swap',
-        convert: 'Convert',
-        test: 'Test',
-        calculate: 'Calculate',
-        copied: 'Copied to clipboard',
-        error: 'Error',
-        success: 'Success',
-        placeholder: 'Enter content...',
-      },
-      errors: {
-        jsonSyntax: 'JSON syntax error: {message}',
-        xmlSyntax: 'XML syntax error',
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
 
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
-
 describe('ColorConverter', () => {
-  const stubs = {
-    'el-button': { template: '<button><slot /></button>' },
-    'el-input': { template: '<input /><slot />' },
-  }
-
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('should render color input', () => {
     const wrapper = mount(ColorConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('input[placeholder="#ff0000"]').exists()).toBe(true)
   })
 
   it('should convert HEX to RGB', async () => {
     const wrapper = mount(ColorConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('input[placeholder="#ff0000"]')
     await input.setValue('#ff0000')
@@ -90,7 +48,7 @@ describe('ColorConverter', () => {
 
   it('should convert RGB to HEX', async () => {
     const wrapper = mount(ColorConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const hexInput = wrapper.find('input[placeholder="#ff0000"]')
     await hexInput.setValue('')
@@ -116,7 +74,7 @@ describe('ColorConverter', () => {
 
   it('should show color preview', async () => {
     const wrapper = mount(ColorConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('input[placeholder="#ff0000"]')
     await input.setValue('#00ff00')
@@ -131,7 +89,7 @@ describe('ColorConverter', () => {
 
   it('should clear input and output', async () => {
     const wrapper = mount(ColorConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('input[placeholder="#ff0000"]')
     await input.setValue('#ff0000')
@@ -140,6 +98,6 @@ describe('ColorConverter', () => {
     const clearButton = buttons.find(b => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
-    expect(input.element.value).toBe('')
+    expect((input.element as HTMLInputElement).value).toBe('')
   })
 })

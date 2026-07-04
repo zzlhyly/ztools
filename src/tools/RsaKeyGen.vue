@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { generateRsaKeyPair, arrayBufferToHex, base64ToArrayBuffer, CryptoError } from '@/utils/crypto'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
 import { KeyRound } from 'lucide-vue-next'
@@ -46,19 +46,9 @@ async function handleGenerate() {
   }
 }
 
-async function copyPublic() {
-  if (publicKey.value) {
-    await copyToClipboard(publicKey.value)
-    ElMessage.success('Public key copied')
-  }
-}
+const copyPublic = useClipboard(publicKey)
 
-async function copyPrivate() {
-  if (privateKey.value) {
-    await copyToClipboard(privateKey.value)
-    ElMessage.success('Private key copied')
-  }
-}
+const copyPrivate = useClipboard(privateKey)
 </script>
 
 <template>

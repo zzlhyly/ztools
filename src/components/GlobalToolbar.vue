@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Moon, Sun, Monitor, Globe } from 'lucide-vue-next'
+import { Moon, Sun, Globe } from 'lucide-vue-next'
 import { useAppStore } from '@/stores/app'
 
 const appStore = useAppStore()

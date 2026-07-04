@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import UrlEncoder from '../UrlEncoder.vue'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -13,66 +14,24 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      tools: {
-        url: { name: 'URL Encoder/Decoder' },
-      },
-      common: {
-        input: 'Input',
-        output: 'Output',
-        format: 'Format',
-        minify: 'Minify',
-        encode: 'Encode',
-        decode: 'Decode',
-        copy: 'Copy',
-        paste: 'Paste',
-        clear: 'Clear',
-        swap: 'Swap',
-        convert: 'Convert',
-        test: 'Test',
-        calculate: 'Calculate',
-        copied: 'Copied to clipboard',
-        error: 'Error',
-        success: 'Success',
-        placeholder: 'Enter content...',
-      },
-      errors: {
-        jsonSyntax: 'JSON syntax error: {message}',
-        xmlSyntax: 'XML syntax error',
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
 
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
-
 describe('UrlEncoder', () => {
-  const stubs = {
-    'el-button': { template: '<button><slot /></button>' },
-  }
-
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('should render input textarea', () => {
     const wrapper = mount(UrlEncoder, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('textarea').exists()).toBe(true)
   })
 
   it('should encode URL', async () => {
     const wrapper = mount(UrlEncoder, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const textarea = wrapper.find('textarea')
     await textarea.setValue('https://example.com/path?q=hello world')
@@ -87,7 +46,7 @@ describe('UrlEncoder', () => {
 
   it('should decode URL', async () => {
     const wrapper = mount(UrlEncoder, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const textarea = wrapper.find('textarea')
     await textarea.setValue('https%3A%2F%2Fexample.com%2Fpath%3Fq%3Dhello%20world')
@@ -102,7 +61,7 @@ describe('UrlEncoder', () => {
 
   it('should clear input and output', async () => {
     const wrapper = mount(UrlEncoder, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const textarea = wrapper.find('textarea')
     await textarea.setValue('test')

@@ -3,6 +3,7 @@
  */
 
 import { invoke } from '@tauri-apps/api/core'
+import { TauriError } from '@/utils/errors'
 
 export type HashAlgorithm = 'MD5' | 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512' | 'SHA3-256' | 'SHA3-512'
 
@@ -216,5 +217,16 @@ export async function sha512(input: string): Promise<string> {
 // ---------------------------------------------------------------------------
 
 export async function hashFile(path: string, algorithm: HashAlgorithm = 'SHA-256'): Promise<string> {
-  return invoke<string>('hash_file', { path, algorithm })
+  try {
+    return await invoke<string>('hash_file', { path, algorithm })
+  } catch (e) {
+    const msg = String(e)
+    if (msg.includes('not found') || msg.includes('No such file')) {
+      throw new TauriError(msg, 'FILE_NOT_FOUND')
+    }
+    if (msg.includes('Permission') || msg.includes('permission')) {
+      throw new TauriError(msg, 'PERMISSION_DENIED')
+    }
+    throw new TauriError(msg, 'UNKNOWN')
+  }
 }

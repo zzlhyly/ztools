@@ -4,6 +4,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import UuidTool from '../UuidTool.vue'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -13,35 +14,8 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      tools: {
-        uuid: { name: 'UUID Generator' },
-      },
-      common: {
-        input: 'Input',
-        output: 'Output',
-        copy: 'Copy',
-        clear: 'Clear',
-        copied: 'Copied to clipboard',
-        success: 'Success',
-        error: 'Error',
-        placeholder: 'Enter content...',
-      },
-      errors: {
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
-
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
 
 vi.mock('@/utils/crypto', () => ({
   generateUuids: vi.fn((count: number) =>
@@ -52,26 +26,20 @@ vi.mock('@/utils/crypto', () => ({
 }))
 
 describe('UuidTool', () => {
-  const stubs = {
-    'el-button': { template: '<button><slot /></button>' },
-    'el-select': { template: '<div class="el-select"><slot /></div>' },
-    'el-option': { template: '<div class="el-option"><slot /></div>' },
-  }
-
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('should render count dropdown', () => {
     const wrapper = mount(UuidTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('.el-select').exists()).toBe(true)
   })
 
   it('should render generate button', () => {
     const wrapper = mount(UuidTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
     expect(buttons.filter(b => b.text().includes('Generate')).length).toBe(1)
@@ -79,7 +47,7 @@ describe('UuidTool', () => {
 
   it('should render copy all button', () => {
     const wrapper = mount(UuidTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
     expect(buttons.filter(b => b.text().includes('Copy')).length).toBe(1)
@@ -87,7 +55,7 @@ describe('UuidTool', () => {
 
   it('should render clear button', () => {
     const wrapper = mount(UuidTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
     expect(buttons.filter(b => b.text().includes('Clear')).length).toBe(1)
@@ -95,7 +63,7 @@ describe('UuidTool', () => {
 
   it('should generate UUIDs on Generate click', async () => {
     const wrapper = mount(UuidTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
     const genButton = buttons.find(b => b.text().includes('Generate'))!

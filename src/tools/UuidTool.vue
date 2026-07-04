@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { generateUuids } from '@/utils/crypto'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
 import { Fingerprint, Copy, Trash2 } from 'lucide-vue-next'
@@ -31,12 +31,7 @@ const handleGenerate = async () => {
   }
 }
 
-const handleCopyAll = async () => {
-  if (output.value) {
-    await copyToClipboard(output.value)
-    ElMessage.success(t('common.copied'))
-  }
-}
+const handleCopyAll = useClipboard(output)
 
 const handleClear = () => {
   output.value = ''

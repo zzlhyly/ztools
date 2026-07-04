@@ -13,7 +13,7 @@ import {
   hexToArrayBuffer,
   arrayBufferToBase64,
 } from '@/utils/crypto'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import ToolTextarea from '@/components/ToolTextarea.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
@@ -117,12 +117,7 @@ function handleGenerateIv() {
   ivHex.value = generateAesIv()
 }
 
-const handleCopy = async () => {
-  if (output.value) {
-    await copyToClipboard(output.value)
-    ElMessage.success(t('common.copied'))
-  }
-}
+const handleCopy = useClipboard(output)
 
 const handleClear = () => {
   input.value = ''

@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core'
+import { TauriError } from '@/utils/errors'
 import { listen, type UnlistenFn } from '@tauri-apps/api/event'
 import type { ProgressEvent, M3u8QualityOption } from '@/stores/m3u8'
 
@@ -48,7 +49,11 @@ export async function invokeFetchPage(
   url: string,
   headers: Record<string, string>,
 ): Promise<FetchPageResult> {
-  return invoke<FetchPageResult>('fetch_page', { url, headers })
+  try {
+    return await invoke<FetchPageResult>('fetch_page', { url, headers })
+  } catch (e) {
+    throw new TauriError(String(e), 'NETWORK_ERROR')
+  }
 }
 
 export interface M3u8Info {
@@ -61,7 +66,11 @@ export async function invokeParseM3u8Urls(
   html: string,
   baseUrl: string,
 ): Promise<M3u8Info[]> {
-  return invoke<M3u8Info[]>('parse_m3u8_urls', { html, baseUrl })
+  try {
+    return await invoke<M3u8Info[]>('parse_m3u8_urls', { html, baseUrl })
+  } catch (e) {
+    throw new TauriError(String(e), 'PARSE_ERROR')
+  }
 }
 
 export interface ParseM3u8Result {
@@ -75,7 +84,11 @@ export async function invokeParseM3u8(
   url: string,
   headers: Record<string, string>,
 ): Promise<ParseM3u8Result> {
-  return invoke<ParseM3u8Result>('parse_m3u8', { url, headers })
+  try {
+    return await invoke<ParseM3u8Result>('parse_m3u8', { url, headers })
+  } catch (e) {
+    throw new TauriError(String(e), 'PARSE_ERROR')
+  }
 }
 
 export interface DownloadConfig {
@@ -89,15 +102,27 @@ export interface DownloadConfig {
 }
 
 export async function invokeStartDownload(config: DownloadConfig): Promise<string> {
-  return invoke<string>('start_download', { config })
+  try {
+    return await invoke<string>('start_download', { config })
+  } catch (e) {
+    throw new TauriError(String(e), 'DOWNLOAD_ERROR')
+  }
 }
 
 export async function invokeCancelDownload(taskId: string): Promise<void> {
-  return invoke('cancel_download', { taskId })
+  try {
+    return await invoke('cancel_download', { taskId })
+  } catch (e) {
+    throw new TauriError(String(e), 'DOWNLOAD_ERROR')
+  }
 }
 
 export async function invokeCheckFfmpeg(ffmpegPath: string): Promise<boolean> {
-  return invoke<boolean>('check_ffmpeg', { ffmpegPath })
+  try {
+    return await invoke<boolean>('check_ffmpeg', { ffmpegPath })
+  } catch (e) {
+    throw new TauriError(String(e), 'UNKNOWN')
+  }
 }
 
 // ---- Event listeners ----
@@ -137,5 +162,9 @@ export async function onDownloadError(
 }
 
 export async function invokeGetDefaultDownloadDir(): Promise<string> {
-  return invoke<string>('get_default_download_dir')
+  try {
+    return await invoke<string>('get_default_download_dir')
+  } catch (e) {
+    throw new TauriError(String(e), 'UNKNOWN')
+  }
 }

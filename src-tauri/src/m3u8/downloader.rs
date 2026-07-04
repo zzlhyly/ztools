@@ -349,3 +349,61 @@ fn build_header_map(headers: &HashMap<String, String>) -> reqwest::header::Heade
     }
     map
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_resolve_url_absolute() {
+        let result = resolve_url("https://cdn.com/playlist.m3u8", "https://other.com/seg.ts");
+        assert_eq!(result, "https://other.com/seg.ts");
+    }
+
+    #[test]
+    fn test_resolve_url_relative() {
+        let result = resolve_url("https://cdn.com/path/playlist.m3u8", "segment-1.ts");
+        assert_eq!(result, "https://cdn.com/path/segment-1.ts");
+    }
+
+    #[test]
+    fn test_resolve_url_subdirectory() {
+        let result = resolve_url("https://cdn.com/a/b/playlist.m3u8", "../videos/seg.ts");
+        assert_eq!(result, "https://cdn.com/a/videos/seg.ts");
+    }
+
+    #[test]
+    fn test_resolve_url_with_port() {
+        let result = resolve_url("https://cdn.com:8443/path/playlist.m3u8", "seg.ts");
+        assert_eq!(result, "https://cdn.com:8443/path/seg.ts");
+    }
+
+    #[test]
+    fn test_resolve_url_with_query() {
+        let result = resolve_url("https://cdn.com/playlist.m3u8?token=abc", "seg.ts");
+        assert_eq!(result, "https://cdn.com/seg.ts");
+    }
+
+    #[test]
+    fn test_resolve_url_invalid_base() {
+        let result = resolve_url("not-a-url", "seg.ts");
+        assert_eq!(result, "seg.ts");
+    }
+
+    #[test]
+    fn test_build_header_map_normal() {
+        let mut headers = HashMap::new();
+        headers.insert("User-Agent".to_string(), "Mozilla/5.0".to_string());
+        headers.insert("Accept".to_string(), "*/*".to_string());
+        let map = build_header_map(&headers);
+        assert_eq!(map.get("User-Agent").unwrap(), "Mozilla/5.0");
+        assert_eq!(map.get("Accept").unwrap(), "*/*");
+    }
+
+    #[test]
+    fn test_build_header_map_empty() {
+        let headers = HashMap::new();
+        let map = build_header_map(&headers);
+        assert!(map.is_empty());
+    }
+}

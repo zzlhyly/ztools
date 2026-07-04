@@ -6,7 +6,7 @@ interface Props {
   copyable?: boolean
 }
 
-const props = withDefaults(defineProps<Props>(), {
+withDefaults(defineProps<Props>(), {
   copyable: false,
 })
 

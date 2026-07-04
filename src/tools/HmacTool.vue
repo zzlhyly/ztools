@@ -3,7 +3,7 @@ import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { computeHmac, detectKeyFormat, CryptoError } from '@/utils/crypto'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import ToolTextarea from '@/components/ToolTextarea.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
@@ -49,12 +49,7 @@ const handleCalculate = async () => {
   }
 }
 
-const handleCopy = async () => {
-  if (output.value) {
-    await copyToClipboard(output.value)
-    ElMessage.success(t('common.copied'))
-  }
-}
+const handleCopy = useClipboard(output)
 
 const handleClear = () => {
   message.value = ''

@@ -1,7 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useM3u8Store } from '../m3u8'
-import type { M3u8Task } from '../m3u8'
 
 // Mock localStorage
 const localStorageMock = (() => {

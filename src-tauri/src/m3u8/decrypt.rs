@@ -125,4 +125,24 @@ mod tests {
         let iv = default_iv(42);
         assert_eq!(iv[12..16], [0x00, 0x00, 0x00, 0x2a]);
     }
+
+    #[test]
+    fn test_decrypt_data_not_multiple_of_16() {
+        let key = vec![0u8; 16];
+        let iv = vec![0u8; 16];
+        let data = vec![0u8; 17];  // not a multiple of 16
+        let result = decrypt_aes128_cbc(&data, &key, &iv);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("multiple of 16"));
+    }
+
+    #[test]
+    fn test_decrypt_wrong_iv_length() {
+        let key = vec![0u8; 16];
+        let iv = vec![0u8; 15];  // should be 16
+        let data = vec![0u8; 16];
+        let result = decrypt_aes128_cbc(&data, &key, &iv);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("IV length"));
+    }
 }

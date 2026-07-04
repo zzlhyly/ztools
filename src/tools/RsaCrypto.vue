@@ -12,7 +12,7 @@ import {
   arrayBufferToHex,
   base64ToArrayBuffer,
 } from '@/utils/crypto'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import ToolTextarea from '@/components/ToolTextarea.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
@@ -132,12 +132,7 @@ async function handleVerify() {
   }
 }
 
-const handleCopy = async () => {
-  if (output.value) {
-    await copyToClipboard(output.value)
-    ElMessage.success('Copied to clipboard')
-  }
-}
+const handleCopy = useClipboard(output)
 
 const handleClear = () => {
   input.value = ''

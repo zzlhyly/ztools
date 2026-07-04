@@ -269,3 +269,48 @@ pub fn run() {
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write;
+
+    #[test]
+    fn test_hash_file_sha256() {
+        let tmp = std::env::temp_dir().join("ztools_hash_test.txt");
+        let mut f = std::fs::File::create(&tmp).unwrap();
+        f.write_all(b"hello world").unwrap();
+        f.sync_all().unwrap();
+
+        // hash_file is async, so use tokio runtime
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(hash_file(
+            tmp.to_string_lossy().to_string(),
+            "SHA-256".to_string(),
+        ));
+        std::fs::remove_file(&tmp).ok();
+        assert!(result.is_ok());
+        // SHA-256 of "hello world" is b94d27b9...
+        assert!(result.unwrap().starts_with("b94d27b9"));
+    }
+
+    #[test]
+    fn test_hash_file_not_found() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(hash_file(
+            "/nonexistent/file/path.txt".to_string(),
+            "SHA-256".to_string(),
+        ));
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_hash_file_unsupported_algorithm() {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(hash_file(
+            "any.txt".to_string(),
+            "MD5".to_string(),
+        ));
+        assert!(result.is_err());
+    }
+}

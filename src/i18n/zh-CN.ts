@@ -141,5 +141,10 @@ export default {
     xmlSyntax: 'XML 语法错误',
     invalidInput: '输入内容无效',
     unknown: '未知错误',
+    FILE_NOT_FOUND: '文件不存在或已被移动',
+    PERMISSION_DENIED: '没有访问该文件的权限',
+    NETWORK_ERROR: '网络连接失败',
+    PARSE_ERROR: '数据解析失败',
+    DOWNLOAD_ERROR: '下载失败',
   },
 }

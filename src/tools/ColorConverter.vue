@@ -2,7 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { copyToClipboard } from '@/utils/clipboard'
+import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
 import { Palette, Trash2 } from 'lucide-vue-next'
@@ -67,12 +67,7 @@ const handleConvert = () => {
   }
 }
 
-const handleCopy = async () => {
-  if (output.value) {
-    await copyToClipboard(output.value)
-    ElMessage.success(t('common.copied'))
-  }
-}
+const handleCopy = useClipboard(output)
 
 const handleClear = () => {
   hexInput.value = ''

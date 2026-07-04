@@ -141,5 +141,10 @@ export default {
     xmlSyntax: 'XML syntax error',
     invalidInput: 'Invalid input',
     unknown: 'Unknown error',
+    FILE_NOT_FOUND: 'File not found or has been moved',
+    PERMISSION_DENIED: 'Access denied — insufficient permissions',
+    NETWORK_ERROR: 'Network connection failed',
+    PARSE_ERROR: 'Failed to parse data',
+    DOWNLOAD_ERROR: 'Download failed',
   },
 }

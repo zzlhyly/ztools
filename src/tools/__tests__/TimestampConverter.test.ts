@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import TimestampConverter from '../TimestampConverter.vue'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -13,69 +14,24 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      tools: {
-        timestamp: { name: 'Timestamp Converter' },
-      },
-      common: {
-        input: 'Input',
-        output: 'Output',
-        format: 'Format',
-        minify: 'Minify',
-        encode: 'Encode',
-        decode: 'Decode',
-        copy: 'Copy',
-        paste: 'Paste',
-        clear: 'Clear',
-        swap: 'Swap',
-        convert: 'Convert',
-        test: 'Test',
-        calculate: 'Calculate',
-        copied: 'Copied to clipboard',
-        error: 'Error',
-        success: 'Success',
-        placeholder: 'Enter content...',
-      },
-      errors: {
-        jsonSyntax: 'JSON syntax error: {message}',
-        xmlSyntax: 'XML syntax error',
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
 
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
-
 describe('TimestampConverter', () => {
-  const stubs = {
-    'el-button': { template: '<button><slot /></button>' },
-    'el-alert': { template: '<div class="el-alert"><slot /></div>' },
-    'el-radio-group': { template: '<div><slot /></div>' },
-    'el-radio': { template: '<label class="el-radio"><slot /></label>' },
-  }
-
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('should render timestamp input', () => {
     const wrapper = mount(TimestampConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('.timestamp-input').exists()).toBe(true)
   })
 
   it('should convert timestamp to date', async () => {
     const wrapper = mount(TimestampConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('.timestamp-input')
     await input.setValue('1609459200')
@@ -90,7 +46,7 @@ describe('TimestampConverter', () => {
 
   it('should convert date to timestamp', async () => {
     const wrapper = mount(TimestampConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('.date-input')
     await input.setValue('2021-01-01T00:00:00')
@@ -107,14 +63,14 @@ describe('TimestampConverter', () => {
 
   it('should support millisecond unit', async () => {
     const wrapper = mount(TimestampConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('.timestamp-input')
     await input.setValue('1609459200000')
 
     const radios = wrapper.findAll('.el-radio')
-    const msRadio = radios.find(r => r.text().includes('Milliseconds'))!
-    await msRadio.trigger('click')
+    const msRadioInput = radios.find(r => r.text().includes('Milliseconds'))!.find('input')
+    await msRadioInput.setValue(true)
 
     const buttons = wrapper.findAll('button')
     const convertButton = buttons.find(b => b.text().includes('Convert'))!
@@ -126,7 +82,7 @@ describe('TimestampConverter', () => {
 
   it('should clear input and output', async () => {
     const wrapper = mount(TimestampConverter, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const input = wrapper.find('.timestamp-input')
     await input.setValue('1609459200')
@@ -135,6 +91,6 @@ describe('TimestampConverter', () => {
     const clearButton = buttons.find(b => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
-    expect(input.element.value).toBe('')
+    expect((input.element as HTMLInputElement).value).toBe('')
   })
 })

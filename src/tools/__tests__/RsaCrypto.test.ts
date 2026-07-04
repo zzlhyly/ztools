@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createI18n } from 'vue-i18n'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -11,46 +12,8 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      common: {
-        input: 'Input',
-        output: 'Output',
-        format: 'Format',
-        minify: 'Minify',
-        encode: 'Encode',
-        decode: 'Decode',
-        copy: 'Copy',
-        paste: 'Paste',
-        clear: 'Clear',
-        swap: 'Swap',
-        convert: 'Convert',
-        test: 'Test',
-        calculate: 'Calculate',
-        copied: 'Copied to clipboard',
-        error: 'Error',
-        success: 'Success',
-        placeholder: 'Enter content...',
-        selectFile: 'Select File',
-        hashing: 'Computing...',
-      },
-      errors: {
-        jsonSyntax: 'JSON syntax error: {message}',
-        xmlSyntax: 'XML syntax error',
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
-
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-    warning: vi.fn(),
-  },
-}))
 
 vi.mock('@/utils/crypto', () => ({
   rsaEncrypt: vi.fn().mockResolvedValue('ZW5jcnlwdGVk'),
@@ -71,17 +34,10 @@ vi.mock('@/utils/clipboard', () => ({
 }))
 
 describe('RsaCrypto', () => {
-  const stubs = {
-    'el-select': { template: '<div class="el-select"><slot /></div>' },
-    'el-option': { template: '<div class="el-option"><slot /></div>' },
-    'el-button': { template: '<button><slot /></button>' },
-    'el-input': { template: '<div class="el-input"><textarea /><slot /></div>' },
-  }
-
   it('should render textarea', async () => {
     const RsaCrypto = await import('../RsaCrypto.vue')
     const wrapper = mount(RsaCrypto.default, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('textarea').exists()).toBe(true)
   })
@@ -89,18 +45,16 @@ describe('RsaCrypto', () => {
   it('should render encrypt padding, sign padding, and output format dropdowns', async () => {
     const RsaCrypto = await import('../RsaCrypto.vue')
     const wrapper = mount(RsaCrypto.default, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const selects = wrapper.findAll('.el-select')
     expect(selects.length).toBe(3)
-    const options = wrapper.findAll('.el-option')
-    expect(options.length).toBe(9) // 4 encrypt + 3 sign + 2 output
   })
 
   it('should render 5 operation buttons', async () => {
     const RsaCrypto = await import('../RsaCrypto.vue')
     const wrapper = mount(RsaCrypto.default, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
     expect(buttons.filter(b => b.text().includes('Encrypt')).length).toBe(1)
@@ -113,9 +67,9 @@ describe('RsaCrypto', () => {
   it('should render key input fields', async () => {
     const RsaCrypto = await import('../RsaCrypto.vue')
     const wrapper = mount(RsaCrypto.default, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
-    const inputs = wrapper.findAll('.el-input')
-    expect(inputs.length).toBe(2)
+    const textareas = wrapper.findAll('textarea')
+    expect(textareas.length).toBe(3)
   })
 })

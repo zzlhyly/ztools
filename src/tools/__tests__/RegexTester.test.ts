@@ -1,9 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import RegexTester from '../RegexTester.vue'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -13,68 +14,24 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      tools: {
-        regex: { name: 'Regex Tester' },
-      },
-      common: {
-        input: 'Input',
-        output: 'Output',
-        format: 'Format',
-        minify: 'Minify',
-        encode: 'Encode',
-        decode: 'Decode',
-        copy: 'Copy',
-        paste: 'Paste',
-        clear: 'Clear',
-        swap: 'Swap',
-        convert: 'Convert',
-        test: 'Test',
-        calculate: 'Calculate',
-        copied: 'Copied to clipboard',
-        error: 'Error',
-        success: 'Success',
-        placeholder: 'Enter content...',
-      },
-      errors: {
-        jsonSyntax: 'JSON syntax error: {message}',
-        xmlSyntax: 'XML syntax error',
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
 
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-  },
-}))
-
 describe('RegexTester', () => {
-  const stubs = {
-    'el-button': { template: '<button><slot /></button>' },
-    'el-checkbox-group': { template: '<div><slot /></div>' },
-    'el-checkbox': { template: '<label class="el-checkbox"><slot /></label>' },
-  }
-
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('should render regex input', () => {
     const wrapper = mount(RegexTester, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('.regex-input').exists()).toBe(true)
   })
 
   it('should match regex pattern', async () => {
     const wrapper = mount(RegexTester, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const regexInput = wrapper.find('.regex-input')
     await regexInput.setValue('\\d+')
@@ -83,8 +40,8 @@ describe('RegexTester', () => {
     await testInput.setValue('abc123def456')
 
     const checkboxes = wrapper.findAll('.el-checkbox')
-    const gCheckbox = checkboxes.find(c => c.text().includes('global'))!
-    await gCheckbox.trigger('click')
+    const gCheckboxInput = checkboxes.find(c => c.text().includes('global'))!.find('input')
+    await gCheckboxInput.setValue(true)
 
     const buttons = wrapper.findAll('button')
     const testButton = buttons.find(b => b.text().includes('Test'))!
@@ -97,7 +54,7 @@ describe('RegexTester', () => {
 
   it('should support global flag', async () => {
     const wrapper = mount(RegexTester, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const regexInput = wrapper.find('.regex-input')
     await regexInput.setValue('\\d+')
@@ -106,8 +63,8 @@ describe('RegexTester', () => {
     await testInput.setValue('1 2 3')
 
     const checkboxes = wrapper.findAll('.el-checkbox')
-    const gCheckbox = checkboxes.find(c => c.text().includes('global'))!
-    await gCheckbox.trigger('click')
+    const gCheckboxInput = checkboxes.find(c => c.text().includes('global'))!.find('input')
+    await gCheckboxInput.setValue(true)
 
     const buttons = wrapper.findAll('button')
     const testButton = buttons.find(b => b.text().includes('Test'))!
@@ -121,7 +78,7 @@ describe('RegexTester', () => {
 
   it('should show no matches message', async () => {
     const wrapper = mount(RegexTester, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const regexInput = wrapper.find('.regex-input')
     await regexInput.setValue('\\d+')
@@ -139,7 +96,7 @@ describe('RegexTester', () => {
 
   it('should clear input and output', async () => {
     const wrapper = mount(RegexTester, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const regexInput = wrapper.find('.regex-input')
     await regexInput.setValue('\\d+')
@@ -148,6 +105,6 @@ describe('RegexTester', () => {
     const clearButton = buttons.find(b => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
-    expect(regexInput.element.value).toBe('')
+    expect((regexInput.element as HTMLInputElement).value).toBe('')
   })
 })

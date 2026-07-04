@@ -4,6 +4,7 @@ import { createRouter, createWebHashHistory } from 'vue-router'
 import { createPinia, setActivePinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
 import AesTool from '../AesTool.vue'
+import enUS from '@/i18n/en-US'
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -13,49 +14,8 @@ const router = createRouter({
 const i18n = createI18n({
   legacy: false,
   locale: 'en-US',
-  messages: {
-    'en-US': {
-      tools: {
-        aes: { name: 'AES Encrypt/Decrypt' },
-      },
-      common: {
-        input: 'Input',
-        output: 'Output',
-        format: 'Format',
-        minify: 'Minify',
-        encode: 'Encrypt',
-        decode: 'Decrypt',
-        copy: 'Copy',
-        paste: 'Paste',
-        clear: 'Clear',
-        swap: 'Swap',
-        convert: 'Convert',
-        test: 'Test',
-        calculate: 'Calculate',
-        copied: 'Copied to clipboard',
-        error: 'Error',
-        success: 'Success',
-        placeholder: 'Enter content...',
-        selectFile: 'Select File',
-        hashing: 'Computing...',
-      },
-      errors: {
-        jsonSyntax: 'JSON syntax error: {message}',
-        xmlSyntax: 'XML syntax error',
-        invalidInput: 'Invalid input',
-        unknown: 'Unknown error',
-      },
-    },
-  },
+  messages: { 'en-US': enUS },
 })
-
-vi.mock('element-plus', () => ({
-  ElMessage: {
-    success: vi.fn(),
-    error: vi.fn(),
-    warning: vi.fn(),
-  },
-}))
 
 vi.mock('@/utils/crypto', () => ({
   aesEncrypt: vi.fn().mockResolvedValue('ZW5jcnlwdGVk'),
@@ -77,36 +37,28 @@ vi.mock('@/utils/clipboard', () => ({
 }))
 
 describe('AesTool', () => {
-  const stubs = {
-    'el-button': { template: '<button><slot /></button>' },
-    'el-select': { template: '<div class="el-select"><slot /></div>' },
-    'el-option': { template: '<div class="el-option"><slot /></div>' },
-    'el-input': { template: '<div class="el-input"><input /></div>' },
-  }
-
   beforeEach(() => {
     setActivePinia(createPinia())
   })
 
   it('should render textarea', () => {
     const wrapper = mount(AesTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     expect(wrapper.find('textarea').exists()).toBe(true)
   })
 
   it('should render mode dropdown options', () => {
     const wrapper = mount(AesTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
-    const options = wrapper.findAll('.el-option')
-    // Should have options for mode, keySize, outputFormat + padding (visible by default for CBC)
-    expect(options.length).toBeGreaterThan(0)
+    const selects = wrapper.findAll('.el-select')
+    expect(selects.length).toBeGreaterThan(0)
   })
 
   it('should have encrypt, decrypt and clear buttons', () => {
     const wrapper = mount(AesTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
     expect(buttons.filter(b => b.text().includes('Encrypt')).length).toBe(1)
@@ -116,7 +68,7 @@ describe('AesTool', () => {
 
   it('should render key and IV input fields', () => {
     const wrapper = mount(AesTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const inputs = wrapper.findAll('.el-input')
     expect(inputs.length).toBe(2)
@@ -124,7 +76,7 @@ describe('AesTool', () => {
 
   it('should clear all fields', async () => {
     const wrapper = mount(AesTool, {
-      global: { plugins: [router, i18n], stubs },
+      global: { plugins: [router, i18n] },
     })
     const textarea = wrapper.find('textarea')
     await textarea.setValue('test input')

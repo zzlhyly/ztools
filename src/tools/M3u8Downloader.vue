@@ -91,6 +91,14 @@ function isDirectUrl(url: string): boolean {
   return url.endsWith('.m3u8') || url.includes('.m3u8?')
 }
 
+function resolveUrl(relativeUrl: string, baseUrl: string): string {
+  try {
+    return new URL(relativeUrl, baseUrl).href
+  } catch {
+    return relativeUrl
+  }
+}
+
 function buildHeaders(): Record<string, string> {
   const headers: Record<string, string> = {}
   const h = store.config.headers
@@ -168,13 +176,28 @@ async function startFromDirectUrl(url: string, headers: Record<string, string>) 
 
   try {
     const result = await invokeParseM3u8(url, headers)
-    if (result.playlist_type === 'master' && result.qualities.length > 1) {
+    if (result.playlist_type === 'master' && result.qualities.length > 0) {
+      const resolvedQualities = result.qualities.map((q) => ({
+        ...q,
+        url: resolveUrl(q.url, url),
+      }))
+      store.updateTask(task.id, { qualityOptions: resolvedQualities })
+
+      if (resolvedQualities.length > 1) {
+        store.updateTask(task.id, { status: 'selecting_quality' })
+        qualityOptions.value = [{ url, label: 'Master Playlist', qualities: resolvedQualities }]
+        showQualitySelect.value = true
+        return
+      }
+
+      // Auto-select single quality
+      const qualityUrl = resolvedQualities[0].url
       store.updateTask(task.id, {
-        status: 'selecting_quality',
-        qualityOptions: result.qualities,
+        m3u8Url: qualityUrl,
+        title: extractFilename(url),
+        quality: resolvedQualities[0].resolution,
       })
-      qualityOptions.value = [{ url, label: 'Master Playlist', qualities: result.qualities }]
-      showQualitySelect.value = true
+      await doStartDownload(task, qualityUrl, store.config.downloadDir)
       return
     }
     await doStartDownload(task, url, store.config.downloadDir)
@@ -204,14 +227,37 @@ async function startFromWebpage(url: string, headers: Record<string, string>) {
     const firstM3u8 = m3u8List[0]
     const playlist = await invokeParseM3u8(firstM3u8.url, headers)
 
-    if (playlist.playlist_type === 'master' && playlist.qualities.length > 1) {
+    if (playlist.playlist_type === 'master' && playlist.qualities.length > 0) {
+      const resolvedQualities = playlist.qualities.map((q) => ({
+        ...q,
+        url: resolveUrl(q.url, firstM3u8.url),
+      }))
       store.updateTask(task.id, {
-        status: 'selecting_quality',
         m3u8Url: firstM3u8.url,
-        qualityOptions: playlist.qualities,
+        qualityOptions: resolvedQualities,
       })
-      qualityOptions.value = m3u8List
-      showQualitySelect.value = true
+
+      if (resolvedQualities.length > 1) {
+        store.updateTask(task.id, { status: 'selecting_quality' })
+        qualityOptions.value = m3u8List.map((item) => ({
+          ...item,
+          qualities: item.qualities.map((q) => ({
+            ...q,
+            url: resolveUrl(q.url, item.url),
+          })),
+        }))
+        showQualitySelect.value = true
+        return
+      }
+
+      // Auto-select single quality
+      const qualityUrl = resolvedQualities[0].url
+      store.updateTask(task.id, {
+        m3u8Url: qualityUrl,
+        title: firstM3u8.label || extractFilename(url),
+        quality: resolvedQualities[0].resolution,
+      })
+      await doStartDownload(task, qualityUrl, store.config.downloadDir)
       return
     }
 
