@@ -40,8 +40,8 @@
 - [x] 5.2 Create `.prettierrc.json` with `semi: false, singleQuote: true, trailingComma: "all", printWidth: 100` ✓
 - [x] 5.3 Add `format` and `format:check` scripts to `package.json` ✓
 - [x] 5.4 Run `npm run format` to format entire project ✓
-- [ ] 5.5 Commit formatted code (manual — user should commit with message `format: Prettier initialization`)
-- [ ] 5.6 Configure `.git-blame-ignore-revs` (manual — needs commit hash from 5.5)
+- [x] 5.5 Commit formatted code ✓ (af96103)
+- [x] 5.6 Configure `.git-blame-ignore-revs` ✓ (28b5950)
 
 ## 6. CI Pipeline
 
