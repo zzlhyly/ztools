@@ -1,0 +1,6 @@
+# .git-blame-ignore-revs
+# Commits that reformat code and should be ignored by git blame.
+# Run: git blame --ignore-revs-file .git-blame-ignore-revs
+# Or: git config blame.ignoreRevsFile .git-blame-ignore-revs
+
+af96103032146cb151fcdf93254829935aaba27f
