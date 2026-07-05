@@ -37,11 +37,7 @@ const handleClear = () => {
 </script>
 
 <template>
-  <ToolLayout
-    :title="t('tools.url.name')"
-    output-copyable
-    @copy="handleCopy"
-  >
+  <ToolLayout :title="t('tools.url.name')" output-copyable @copy="handleCopy">
     <template #input>
       <ToolTextarea
         v-model="input"
@@ -52,32 +48,19 @@ const handleClear = () => {
     </template>
 
     <template #actions>
-      <el-button
-        type="primary"
-        :icon="Link"
-        @click="handleEncode"
-      >
+      <el-button type="primary" :icon="Link" @click="handleEncode">
         {{ t('common.encode') }}
       </el-button>
-      <el-button
-        :icon="Unlink"
-        @click="handleDecode"
-      >
+      <el-button :icon="Unlink" @click="handleDecode">
         {{ t('common.decode') }}
       </el-button>
-      <el-button
-        :icon="Trash2"
-        @click="handleClear"
-      >
+      <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput
-        :content="output"
-        language="text"
-      />
+      <CodeOutput :content="output" language="text" />
     </template>
   </ToolLayout>
 </template>

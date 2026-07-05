@@ -17,10 +17,7 @@ const props = defineProps<Props>()
       <span class="progress-speed">{{ props.speed || '—' }}</span>
       <span class="progress-count">{{ props.downloaded }} / {{ props.total }}</span>
     </div>
-    <div
-      class="progress-bar-track"
-      role="progressbar"
-    >
+    <div class="progress-bar-track" role="progressbar">
       <div
         class="progress-bar-fill"
         :style="{ width: props.progress + '%' }"

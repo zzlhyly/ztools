@@ -104,10 +104,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <aside
-    class="sidebar"
-    :class="{ collapsed: appStore.sidebarCollapsed }"
-  >
+  <aside class="sidebar" :class="{ collapsed: appStore.sidebarCollapsed }">
     <div class="sidebar-search">
       <el-input
         v-if="!appStore.sidebarCollapsed"
@@ -121,19 +118,13 @@ onUnmounted(() => {
           <Search :size="14" />
         </template>
       </el-input>
-      <div
-        v-else
-        class="search-collapsed"
-      >
+      <div v-else class="search-collapsed">
         <Search :size="20" />
       </div>
     </div>
 
     <div class="sidebar-content">
-      <div
-        v-if="recentTools.length > 0 && !appStore.sidebarCollapsed"
-        class="sidebar-section"
-      >
+      <div v-if="recentTools.length > 0 && !appStore.sidebarCollapsed" class="sidebar-section">
         <div class="section-title">
           {{ t('common.recent') }}
         </div>
@@ -145,19 +136,13 @@ onUnmounted(() => {
           :title="t(`tools.${tool.key}.name`)"
           @click="navigateTo(tool.path)"
         >
-          <component
-            :is="tool.icon"
-            :size="18"
-          />
+          <component :is="tool.icon" :size="18" />
           <span class="menu-text">{{ t(`tools.${tool.key}.name`) }}</span>
         </div>
       </div>
 
       <div class="sidebar-section">
-        <div
-          v-if="!appStore.sidebarCollapsed"
-          class="section-title"
-        >
+        <div v-if="!appStore.sidebarCollapsed" class="section-title">
           {{ t('common.allTools') }}
         </div>
         <div
@@ -168,32 +153,17 @@ onUnmounted(() => {
           :title="t(`tools.${tool.key}.name`)"
           @click="navigateTo(tool.path)"
         >
-          <component
-            :is="tool.icon"
-            :size="18"
-          />
-          <span
-            v-if="!appStore.sidebarCollapsed"
-            class="menu-text"
-          >
+          <component :is="tool.icon" :size="18" />
+          <span v-if="!appStore.sidebarCollapsed" class="menu-text">
             {{ t(`tools.${tool.key}.name`) }}
           </span>
         </div>
       </div>
     </div>
 
-    <button
-      class="toggle-button"
-      @click="appStore.toggleSidebar()"
-    >
-      <ChevronLeft
-        v-if="!appStore.sidebarCollapsed"
-        :size="16"
-      />
-      <ChevronRight
-        v-else
-        :size="16"
-      />
+    <button class="toggle-button" @click="appStore.toggleSidebar()">
+      <ChevronLeft v-if="!appStore.sidebarCollapsed" :size="16" />
+      <ChevronRight v-else :size="16" />
     </button>
   </aside>
 </template>

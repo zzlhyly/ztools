@@ -60,34 +60,13 @@ const copyPrivate = useClipboard(privateKey)
 </script>
 
 <template>
-  <ToolLayout
-    title="RSA Key Generator"
-    :output-copyable="false"
-  >
+  <ToolLayout title="RSA Key Generator" :output-copyable="false">
     <template #input-actions>
-      <el-select
-        v-model="keySize"
-        size="small"
-        style="width: 120px"
-      >
-        <el-option
-          v-for="ks in KEY_SIZES"
-          :key="ks"
-          :label="`${ks} bit`"
-          :value="ks"
-        />
+      <el-select v-model="keySize" size="small" style="width: 120px">
+        <el-option v-for="ks in KEY_SIZES" :key="ks" :label="`${ks} bit`" :value="ks" />
       </el-select>
-      <el-select
-        v-model="format"
-        size="small"
-        style="width: 110px"
-      >
-        <el-option
-          v-for="f in FORMATS"
-          :key="f"
-          :label="f"
-          :value="f"
-        />
+      <el-select v-model="format" size="small" style="width: 110px">
+        <el-option v-for="f in FORMATS" :key="f" :label="f" :value="f" />
       </el-select>
     </template>
 
@@ -96,12 +75,7 @@ const copyPrivate = useClipboard(privateKey)
     </template>
 
     <template #actions>
-      <el-button
-        type="primary"
-        :icon="KeyRound"
-        :loading="isGenerating"
-        @click="handleGenerate"
-      >
+      <el-button type="primary" :icon="KeyRound" :loading="isGenerating" @click="handleGenerate">
         {{ t('common.generate') }}
       </el-button>
     </template>
@@ -111,10 +85,7 @@ const copyPrivate = useClipboard(privateKey)
         <div class="key-panel public-key-panel">
           <div class="key-panel-header">
             <span class="key-panel-title">{{ t('common.publicKey') }}</span>
-            <el-button
-              size="small"
-              @click="copyPublic"
-            >
+            <el-button size="small" @click="copyPublic">
               {{ t('common.copy') }}
             </el-button>
           </div>
@@ -125,10 +96,7 @@ const copyPrivate = useClipboard(privateKey)
         <div class="key-panel private-key-panel">
           <div class="key-panel-header">
             <span class="key-panel-title">{{ t('common.privateKey') }}</span>
-            <el-button
-              size="small"
-              @click="copyPrivate"
-            >
+            <el-button size="small" @click="copyPrivate">
               {{ t('common.copy') }}
             </el-button>
           </div>

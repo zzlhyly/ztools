@@ -51,57 +51,34 @@ const handleClear = () => {
             type="text"
             class="regex-input"
             placeholder="Enter regex pattern..."
-          >
+          />
         </div>
         <div class="form-group">
           <label>Test String</label>
-          <textarea
-            v-model="testString"
-            class="test-input"
-            placeholder="Enter test string..."
-          />
+          <textarea v-model="testString" class="test-input" placeholder="Enter test string..." />
         </div>
         <div class="form-group">
           <label>Flags</label>
           <el-checkbox-group v-model="flags">
-            <el-checkbox
-              value="g"
-              label="g (global)"
-            />
-            <el-checkbox
-              value="i"
-              label="i (case insensitive)"
-            />
-            <el-checkbox
-              value="m"
-              label="m (multiline)"
-            />
+            <el-checkbox value="g" label="g (global)" />
+            <el-checkbox value="i" label="i (case insensitive)" />
+            <el-checkbox value="m" label="m (multiline)" />
           </el-checkbox-group>
         </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button
-        type="primary"
-        :icon="Search"
-        @click="handleTest"
-      >
+      <el-button type="primary" :icon="Search" @click="handleTest">
         {{ t('common.test') }}
       </el-button>
-      <el-button
-        :icon="Trash2"
-        @click="handleClear"
-      >
+      <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput
-        :content="output"
-        language="text"
-      />
+      <CodeOutput :content="output" language="text" />
     </template>
   </ToolLayout>
 </template>

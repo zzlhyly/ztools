@@ -13,23 +13,11 @@ withDefaults(defineProps<Props>(), {
 
 <template>
   <div class="code-output">
-    <el-alert
-      v-if="error"
-      :title="error"
-      type="error"
-      :closable="false"
-      show-icon
-    />
-    <div
-      v-else-if="content"
-      class="code-content"
-    >
+    <el-alert v-if="error" :title="error" type="error" :closable="false" show-icon />
+    <div v-else-if="content" class="code-content">
       <pre><code>{{ content }}</code></pre>
     </div>
-    <div
-      v-else
-      class="empty-state"
-    >
+    <div v-else class="empty-state">
       {{ $t('common.output') }}
     </div>
   </div>

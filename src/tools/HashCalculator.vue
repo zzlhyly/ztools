@@ -72,17 +72,9 @@ const handleClear = () => {
 </script>
 
 <template>
-  <ToolLayout
-    :title="t('tools.hash.name')"
-    output-copyable
-    @copy="handleCopy"
-  >
+  <ToolLayout :title="t('tools.hash.name')" output-copyable @copy="handleCopy">
     <template #input-actions>
-      <el-select
-        v-model="selectedAlgorithm"
-        size="small"
-        style="width: 140px"
-      >
+      <el-select v-model="selectedAlgorithm" size="small" style="width: 140px">
         <el-option
           v-for="alg in HASH_ALGORITHMS"
           :key="alg.value"
@@ -90,11 +82,7 @@ const handleClear = () => {
           :value="alg.value"
         />
       </el-select>
-      <el-button
-        :icon="FolderOpen"
-        size="small"
-        @click="handleSelectFile"
-      >
+      <el-button :icon="FolderOpen" size="small" @click="handleSelectFile">
         {{ t('common.selectFile') }}
       </el-button>
     </template>
@@ -108,43 +96,24 @@ const handleClear = () => {
           submit-hotkey
           @submit="handleCalculate"
         />
-        <div
-          v-if="selectedFile"
-          class="file-indicator"
-        >
+        <div v-if="selectedFile" class="file-indicator">
           <span class="file-path">{{ selectedFile }}</span>
-          <el-button
-            :icon="X"
-            size="small"
-            circle
-            @click="handleClearFile"
-          />
+          <el-button :icon="X" size="small" circle @click="handleClearFile" />
         </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button
-        type="primary"
-        :icon="Hash"
-        :loading="isHashing"
-        @click="handleCalculate"
-      >
+      <el-button type="primary" :icon="Hash" :loading="isHashing" @click="handleCalculate">
         {{ isHashing ? t('common.hashing') : t('common.calculate') }}
       </el-button>
-      <el-button
-        :icon="Trash2"
-        @click="handleClear"
-      >
+      <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput
-        :content="output"
-        language="text"
-      />
+      <CodeOutput :content="output" language="text" />
     </template>
   </ToolLayout>
 </template>

@@ -20,41 +20,19 @@ onMounted(() => {
 </script>
 
 <template>
-  <div
-    data-tauri-drag-region
-    class="titlebar"
-    :class="{ 'is-mac': isMac }"
-  >
-    <div
-      class="titlebar-brand"
-      :style="{ paddingLeft: isMac ? '70px' : '16px' }"
-    >
-      <Wrench
-        :size="14"
-        class="brand-icon"
-      />
+  <div data-tauri-drag-region class="titlebar" :class="{ 'is-mac': isMac }">
+    <div class="titlebar-brand" :style="{ paddingLeft: isMac ? '70px' : '16px' }">
+      <Wrench :size="14" class="brand-icon" />
       <span class="titlebar-title">{{ title }}</span>
     </div>
-    <div
-      v-if="!isMac"
-      class="titlebar-controls"
-    >
-      <button
-        class="titlebar-button"
-        @click="minimizeWindow"
-      >
+    <div v-if="!isMac" class="titlebar-controls">
+      <button class="titlebar-button" @click="minimizeWindow">
         <Minus :size="14" />
       </button>
-      <button
-        class="titlebar-button"
-        @click="maximizeWindow"
-      >
+      <button class="titlebar-button" @click="maximizeWindow">
         <Maximize2 :size="14" />
       </button>
-      <button
-        class="titlebar-button close"
-        @click="closeWindow"
-      >
+      <button class="titlebar-button close" @click="closeWindow">
         <X :size="14" />
       </button>
     </div>

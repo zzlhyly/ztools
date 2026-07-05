@@ -153,47 +153,16 @@ watch([publicKey, encryptPadding], () => {
 </script>
 
 <template>
-  <ToolLayout
-    :title="t('tools.rsaCrypto.name')"
-    output-copyable
-    @copy="handleCopy"
-  >
+  <ToolLayout :title="t('tools.rsaCrypto.name')" output-copyable @copy="handleCopy">
     <template #input-actions>
-      <el-select
-        v-model="encryptPadding"
-        size="small"
-        style="width: 160px"
-      >
-        <el-option
-          v-for="p in ENCRYPT_PADDINGS"
-          :key="p"
-          :label="p"
-          :value="p"
-        />
+      <el-select v-model="encryptPadding" size="small" style="width: 160px">
+        <el-option v-for="p in ENCRYPT_PADDINGS" :key="p" :label="p" :value="p" />
       </el-select>
-      <el-select
-        v-model="signPadding"
-        size="small"
-        style="width: 150px"
-      >
-        <el-option
-          v-for="p in SIGN_PADDINGS"
-          :key="p"
-          :label="p"
-          :value="p"
-        />
+      <el-select v-model="signPadding" size="small" style="width: 150px">
+        <el-option v-for="p in SIGN_PADDINGS" :key="p" :label="p" :value="p" />
       </el-select>
-      <el-select
-        v-model="outputFormat"
-        size="small"
-        style="width: 110px"
-      >
-        <el-option
-          v-for="f in OUTPUT_FORMATS"
-          :key="f"
-          :label="f"
-          :value="f"
-        />
+      <el-select v-model="outputFormat" size="small" style="width: 110px">
+        <el-option v-for="f in OUTPUT_FORMATS" :key="f" :label="f" :value="f" />
       </el-select>
     </template>
 
@@ -205,10 +174,7 @@ watch([publicKey, encryptPadding], () => {
           submit-hotkey
           @submit="handleEncrypt"
         />
-        <div
-          v-if="maxPayloadHint"
-          class="payload-hint"
-        >
+        <div v-if="maxPayloadHint" class="payload-hint">
           {{ maxPayloadHint }}
         </div>
         <el-input
@@ -225,10 +191,7 @@ watch([publicKey, encryptPadding], () => {
           :placeholder="t('common.privateKey')"
           class="key-input"
         />
-        <div
-          v-if="signatureForVerify"
-          class="signature-row"
-        >
+        <div v-if="signatureForVerify" class="signature-row">
           <label class="signature-label">Signature</label>
           <el-input
             v-model="signatureForVerify"
@@ -273,19 +236,13 @@ watch([publicKey, encryptPadding], () => {
       >
         {{ t('common.publicVerify') }}
       </el-button>
-      <el-button
-        :icon="Trash2"
-        @click="handleClear"
-      >
+      <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput
-        :content="output"
-        language="text"
-      />
+      <CodeOutput :content="output" language="text" />
     </template>
   </ToolLayout>
 </template>

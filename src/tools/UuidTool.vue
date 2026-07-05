@@ -41,17 +41,8 @@ const handleClear = () => {
 <template>
   <ToolLayout title="UUID Generator">
     <template #input-actions>
-      <el-select
-        v-model="count"
-        size="small"
-        style="width: 100px"
-      >
-        <el-option
-          v-for="c in COUNTS"
-          :key="c"
-          :label="`${c}`"
-          :value="c"
-        />
+      <el-select v-model="count" size="small" style="width: 100px">
+        <el-option v-for="c in COUNTS" :key="c" :label="`${c}`" :value="c" />
       </el-select>
     </template>
 
@@ -62,24 +53,13 @@ const handleClear = () => {
     </template>
 
     <template #actions>
-      <el-button
-        type="primary"
-        :icon="Fingerprint"
-        :loading="isGenerating"
-        @click="handleGenerate"
-      >
+      <el-button type="primary" :icon="Fingerprint" :loading="isGenerating" @click="handleGenerate">
         {{ t('common.generate') }}
       </el-button>
-      <el-button
-        :icon="Copy"
-        @click="handleCopyAll"
-      >
+      <el-button :icon="Copy" @click="handleCopyAll">
         {{ t('common.copyAll') }}
       </el-button>
-      <el-button
-        :icon="Trash2"
-        @click="handleClear"
-      >
+      <el-button :icon="Trash2" @click="handleClear">
         {{ t('common.clear') }}
       </el-button>
     </template>

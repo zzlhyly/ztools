@@ -18,15 +18,8 @@ const handleLanguageChange = (lang: string) => {
 
 <template>
   <div class="global-toolbar">
-    <el-dropdown
-      trigger="click"
-      @command="handleThemeChange"
-    >
-      <el-button
-        link
-        :icon="appStore.isDark ? Moon : Sun"
-        size="small"
-      >
+    <el-dropdown trigger="click" @command="handleThemeChange">
+      <el-button link :icon="appStore.isDark ? Moon : Sun" size="small">
         {{ t(`app.${appStore.theme}`) }}
       </el-button>
       <template #dropdown>
@@ -44,25 +37,14 @@ const handleLanguageChange = (lang: string) => {
       </template>
     </el-dropdown>
 
-    <el-dropdown
-      trigger="click"
-      @command="handleLanguageChange"
-    >
-      <el-button
-        link
-        :icon="Globe"
-        size="small"
-      >
+    <el-dropdown trigger="click" @command="handleLanguageChange">
+      <el-button link :icon="Globe" size="small">
         {{ appStore.locale === 'zh-CN' ? '中文' : 'EN' }}
       </el-button>
       <template #dropdown>
         <el-dropdown-menu>
-          <el-dropdown-item command="zh-CN">
-            中文
-          </el-dropdown-item>
-          <el-dropdown-item command="en-US">
-            English
-          </el-dropdown-item>
+          <el-dropdown-item command="zh-CN"> 中文 </el-dropdown-item>
+          <el-dropdown-item command="en-US"> English </el-dropdown-item>
         </el-dropdown-menu>
       </template>
     </el-dropdown>

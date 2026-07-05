@@ -21,13 +21,7 @@ const emit = defineEmits<{
       <span class="panel-title">{{ title }}</span>
       <div class="panel-actions">
         <slot name="actions" />
-        <el-button
-          v-if="copyable"
-          type="info"
-          link
-          :icon="Copy"
-          @click="emit('copy')"
-        >
+        <el-button v-if="copyable" type="info" link :icon="Copy" @click="emit('copy')">
           {{ $t('common.copy') }}
         </el-button>
       </div>
