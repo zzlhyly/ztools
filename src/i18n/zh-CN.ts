@@ -64,6 +64,46 @@ export default {
       name: 'UUID 生成',
       description: 'UUID v4 生成器',
     },
+    yaml: {
+      name: 'YAML ↔ JSON',
+      description: 'YAML 与 JSON 格式互转',
+    },
+    sql: {
+      name: 'SQL 格式化',
+      description: '格式化和美化 SQL 查询',
+    },
+    qrcode: {
+      name: 'QR 码生成器',
+      description: '从文本或链接生成二维码',
+    },
+    password: {
+      name: '密码生成器',
+      description: '生成安全的随机密码',
+    },
+    cidr: {
+      name: 'CIDR 计算器',
+      description: '计算子网掩码、主机数量和网络范围',
+    },
+    jwt: {
+      name: 'JWT 调试器',
+      description: '解码和检查 JWT 令牌',
+    },
+    diff: {
+      name: '文本差异',
+      description: '比较两段文本并高亮差异',
+    },
+    ed25519: {
+      name: 'Ed25519',
+      description: '生成 Ed25519 密钥对，签名与验证',
+    },
+    image: {
+      name: '图片转换器',
+      description: '在 PNG、JPEG、WebP 格式之间转换',
+    },
+    encoding: {
+      name: '编码转换器',
+      description: '检测和转换文本文件编码',
+    },
   },
   common: {
     input: '输入',
@@ -76,6 +116,7 @@ export default {
     paste: '粘贴',
     clear: '清空',
     swap: '交换',
+    compare: '比较',
     convert: '转换',
     test: '测试',
     calculate: '计算',
@@ -129,6 +170,9 @@ export default {
     ffmpegNotFound: '未找到 FFmpeg，请安装后配置路径',
     liveNotSupported: '不支持直播流',
     addTask: '添加任务',
+    size: '尺寸',
+    fgColor: '前景色',
+    bgColor: '背景色',
     quality: '清晰度',
     selectQuality: '选择清晰度',
     confirmCancel: '确定要取消此下载吗？',

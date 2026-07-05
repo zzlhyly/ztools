@@ -39,4 +39,6 @@ ring = "0.17"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "1"
+image = { version = "0.25", default-features = false, features = ["jpeg", "png", "webp"] }
+encoding_rs = "0.8"
 

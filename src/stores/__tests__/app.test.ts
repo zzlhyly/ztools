@@ -106,4 +106,27 @@ describe('App Store', () => {
     store.setTheme('light')
     expect(store.isDark).toBe(false)
   })
+
+  it('should persist and retrieve tool inputs', () => {
+    const store = useAppStore()
+    store.saveToolInput('/json', '{"key":"value"}')
+    expect(store.toolInputs['/json']).toBe('{"key":"value"}')
+    expect(store.getToolInput('/json')).toBe('{"key":"value"}')
+    expect(localStorageMock.setItem).toHaveBeenCalledWith(
+      'toolInputs',
+      JSON.stringify({ '/json': '{"key":"value"}' }),
+    )
+  })
+
+  it('should return empty string for unknown tool input', () => {
+    const store = useAppStore()
+    expect(store.getToolInput('/unknown')).toBe('')
+  })
+
+  it('should clear tool input when set to empty string', () => {
+    const store = useAppStore()
+    store.saveToolInput('/json', 'test')
+    store.saveToolInput('/json', '')
+    expect(store.getToolInput('/json')).toBe('')
+  })
 })

@@ -64,6 +64,46 @@ export default {
       name: 'UUID Generator',
       description: 'Generate UUID v4 identifiers',
     },
+    yaml: {
+      name: 'YAML ↔ JSON',
+      description: 'Convert between YAML and JSON formats',
+    },
+    sql: {
+      name: 'SQL Formatter',
+      description: 'Format and beautify SQL queries',
+    },
+    qrcode: {
+      name: 'QR Code Generator',
+      description: 'Generate QR codes from text or URLs',
+    },
+    password: {
+      name: 'Password Generator',
+      description: 'Generate secure random passwords',
+    },
+    cidr: {
+      name: 'CIDR Calculator',
+      description: 'Calculate subnet masks, hosts, and network ranges',
+    },
+    jwt: {
+      name: 'JWT Debugger',
+      description: 'Decode and inspect JWT tokens',
+    },
+    diff: {
+      name: 'Text Diff',
+      description: 'Compare two texts and highlight differences',
+    },
+    ed25519: {
+      name: 'Ed25519',
+      description: 'Generate Ed25519 keys, sign and verify data',
+    },
+    image: {
+      name: 'Image Converter',
+      description: 'Convert between PNG, JPEG, and WebP formats',
+    },
+    encoding: {
+      name: 'Encoding Converter',
+      description: 'Detect and convert text file encodings',
+    },
   },
   common: {
     input: 'Input',
@@ -76,6 +116,7 @@ export default {
     paste: 'Paste',
     clear: 'Clear',
     swap: 'Swap',
+    compare: 'Compare',
     convert: 'Convert',
     test: 'Test',
     calculate: 'Calculate',
@@ -129,6 +170,9 @@ export default {
     ffmpegNotFound: 'FFmpeg not found. Please install and configure the path.',
     liveNotSupported: 'Live streams are not supported.',
     addTask: 'Add Task',
+    size: 'Size',
+    fgColor: 'Foreground',
+    bgColor: 'Background',
     quality: 'Quality',
     selectQuality: 'Select Quality',
     confirmCancel: 'Are you sure you want to cancel this download?',

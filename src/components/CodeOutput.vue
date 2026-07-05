@@ -2,7 +2,7 @@
 interface Props {
   content: string
   error?: string
-  language?: 'json' | 'xml' | 'text'
+  language?: 'json' | 'xml' | 'yaml' | 'sql' | 'text'
 }
 
 withDefaults(defineProps<Props>(), {

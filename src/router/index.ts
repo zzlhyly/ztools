@@ -16,6 +16,16 @@ const routes = [
   { path: '/rsa-crypto', component: () => import('@/tools/RsaCrypto.vue') },
   { path: '/hmac', component: () => import('@/tools/HmacTool.vue') },
   { path: '/uuid', component: () => import('@/tools/UuidTool.vue') },
+  { path: '/diff', component: () => import('@/tools/TextDiff.vue') },
+  { path: '/ed25519', component: () => import('@/tools/Ed25519Tool.vue') },
+  { path: '/yaml', component: () => import('@/tools/YamlConverter.vue') },
+  { path: '/sql', component: () => import('@/tools/SqlFormatter.vue') },
+  { path: '/qrcode', component: () => import('@/tools/QrcodeGenerator.vue') },
+  { path: '/password', component: () => import('@/tools/PasswordGenerator.vue') },
+  { path: '/cidr', component: () => import('@/tools/CidrCalculator.vue') },
+  { path: '/jwt', component: () => import('@/tools/JwtDebugger.vue') },
+  { path: '/image', component: () => import('@/tools/ImageConverter.vue') },
+  { path: '/encoding', component: () => import('@/tools/EncodingConverter.vue') },
 ]
 
 const router = createRouter({

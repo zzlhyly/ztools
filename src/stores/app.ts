@@ -8,6 +8,9 @@ export const useAppStore = defineStore('app', () => {
   )
   const sidebarCollapsed = ref(false)
   const recentTools = ref<string[]>(JSON.parse(localStorage.getItem('recentTools') || '[]'))
+  const toolInputs = ref<Record<string, string>>(
+    JSON.parse(localStorage.getItem('toolInputs') || '{}'),
+  )
   const locale = ref(localStorage.getItem('locale') || 'zh-CN')
 
   // Computed - 自动响应 theme 变化
@@ -56,15 +59,31 @@ export const useAppStore = defineStore('app', () => {
     localStorage.setItem('recentTools', JSON.stringify(recentTools.value))
   }
 
+  function getToolInput(path: string): string {
+    return toolInputs.value[path] || ''
+  }
+
+  function saveToolInput(path: string, value: string) {
+    if (value) {
+      toolInputs.value[path] = value
+    } else {
+      delete toolInputs.value[path]
+    }
+    localStorage.setItem('toolInputs', JSON.stringify(toolInputs.value))
+  }
+
   return {
     theme,
     sidebarCollapsed,
     recentTools,
+    toolInputs,
     locale,
     isDark,
     setTheme,
     setLocale,
     toggleSidebar,
     addRecentTool,
+    getToolInput,
+    saveToolInput,
   }
 })

@@ -15,6 +15,16 @@ describe('Router', () => {
     expect(routePaths).toContain('/hash')
     expect(routePaths).toContain('/m3u8')
     expect(routePaths).toContain('/aes')
+    expect(routePaths).toContain('/yaml')
+    expect(routePaths).toContain('/sql')
+    expect(routePaths).toContain('/qrcode')
+    expect(routePaths).toContain('/diff')
+    expect(routePaths).toContain('/ed25519')
+    expect(routePaths).toContain('/password')
+    expect(routePaths).toContain('/cidr')
+    expect(routePaths).toContain('/jwt')
+    expect(routePaths).toContain('/image')
+    expect(routePaths).toContain('/encoding')
   })
 
   it('should redirect root to /json', () => {
@@ -22,7 +32,7 @@ describe('Router', () => {
     expect(rootRoute?.redirect).toBe('/json')
   })
 
-  it('should have 15 routes total', () => {
-    expect(router.options.routes).toHaveLength(15)
+  it('should have 25 routes total', () => {
+    expect(router.options.routes).toHaveLength(25)
   })
 })

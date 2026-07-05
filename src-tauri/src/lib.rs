@@ -362,6 +362,88 @@ async fn check_ffmpeg(ffmpeg_path: String) -> Result<bool, AppError> {
     Ok(output.is_ok())
 }
 
+/// Convert an image file between formats using the `image` crate.
+#[tauri::command]
+fn convert_image(input_path: String, output_format: String) -> Result<serde_json::Value, AppError> {
+    use image::GenericImageView;
+    let img = image::open(&input_path)
+        .map_err(|e| AppError::Parse(format!("Failed to open image: {}", e)))?;
+    let (w, h) = img.dimensions();
+    let original_size = std::fs::metadata(&input_path)
+        .map_err(|e| AppError::io(e, &input_path))?
+        .len();
+
+    let output_path =
+        std::env::temp_dir().join(format!("ztools_output.{}", output_format.to_lowercase()));
+
+    let format = match output_format.to_lowercase().as_str() {
+        "jpeg" | "jpg" => image::ImageFormat::Jpeg,
+        "png" => image::ImageFormat::Png,
+        "webp" => image::ImageFormat::WebP,
+        _ => {
+            return Err(AppError::InvalidInput(format!(
+                "Unsupported format: {}",
+                output_format
+            )))
+        }
+    };
+
+    img.save_with_format(&output_path, format)
+        .map_err(|e| AppError::Parse(format!("Failed to save image: {}", e)))?;
+
+    let output_size = std::fs::metadata(&output_path)
+        .map_err(|e| AppError::io(e, &output_path.to_string_lossy()))?
+        .len();
+
+    Ok(serde_json::json!({
+        "output_path": output_path.to_string_lossy(),
+        "original_size": original_size,
+        "output_size": output_size,
+        "width": w,
+        "height": h,
+    }))
+}
+
+/// Detect the encoding of a text file (BOM-based + basic heuristic).
+#[tauri::command]
+fn detect_encoding(file_path: String) -> Result<serde_json::Value, AppError> {
+    let bytes = std::fs::read(&file_path).map_err(|e| AppError::io(e, &file_path))?;
+    let (encoding, confidence) =
+        encoding_rs::Encoding::for_bom(&bytes).unwrap_or((encoding_rs::UTF_8, 1));
+    Ok(serde_json::json!({
+        "encoding": encoding.name(),
+        "confidence": confidence,
+    }))
+}
+
+/// Convert a text file from its detected encoding to a target encoding.
+#[tauri::command]
+fn convert_encoding(
+    file_path: String,
+    target_encoding: String,
+) -> Result<serde_json::Value, AppError> {
+    let bytes = std::fs::read(&file_path).map_err(|e| AppError::io(e, &file_path))?;
+    let (source_encoding, _) =
+        encoding_rs::Encoding::for_bom(&bytes).unwrap_or((encoding_rs::UTF_8, 1));
+    let (decoded, _actual_encoding, had_errors) = source_encoding.decode(&bytes);
+
+    let target_enc =
+        encoding_rs::Encoding::for_label(target_encoding.as_bytes()).ok_or_else(|| {
+            AppError::InvalidInput(format!("Unsupported target encoding: {}", target_encoding))
+        })?;
+    let (encoded, _enc, _errors) = target_enc.encode(&decoded);
+
+    let output_path = std::env::temp_dir().join("ztools_encoding_output.txt");
+    std::fs::write(&output_path, &encoded)
+        .map_err(|e| AppError::io(e, &output_path.to_string_lossy()))?;
+
+    Ok(serde_json::json!({
+        "output_path": output_path.to_string_lossy(),
+        "source_encoding": source_encoding.name(),
+        "had_errors": had_errors,
+    }))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tracing_subscriber::fmt()
@@ -387,6 +469,9 @@ pub fn run() {
             check_ffmpeg,
             get_default_download_dir,
             hash_file,
+            convert_image,
+            detect_encoding,
+            convert_encoding,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
