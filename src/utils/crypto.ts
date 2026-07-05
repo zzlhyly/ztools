@@ -26,7 +26,7 @@ export function base64ToArrayBuffer(b64: string): ArrayBuffer {
     for (let i = 0; i < binary.length; i++) {
       bytes[i] = binary.charCodeAt(i)
     }
-    return bytes.buffer
+    return bytes.buffer.slice(0)
   } catch {
     throw new CryptoError('Invalid Base64 input')
   }
