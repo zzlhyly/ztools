@@ -2,7 +2,6 @@
 import { ref } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { useI18n } from 'vue-i18n'
-import { ElMessage } from 'element-plus'
 import { useAppStore } from '@/stores/app'
 import ToolLayout from '@/components/ToolLayout.vue'
 import { Upload, Download } from 'lucide-vue-next'

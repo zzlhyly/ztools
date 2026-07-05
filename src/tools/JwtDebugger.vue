@@ -6,7 +6,7 @@ import { copyToClipboard } from '@/utils/clipboard'
 import { useAppStore } from '@/stores/app'
 import ToolLayout from '@/components/ToolLayout.vue'
 import ToolTextarea from '@/components/ToolTextarea.vue'
-import { FileKey, Copy, Shield, Trash2 } from 'lucide-vue-next'
+import { Copy, Shield, Trash2 } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const appStore = useAppStore()

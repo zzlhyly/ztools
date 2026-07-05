@@ -20,6 +20,16 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - **HMAC Calculator** - Compute HMAC message authentication codes (SHA-1/256/384/512)
 - **UUID Generator** - Generate UUID v4 identifiers in batch
 - **M3U8 Downloader** - Download M3U8 videos and convert to MP4 with AES-128 decryption support
+- **JWT Debugger** - Decode and inspect JWT tokens (header, payload, signature verification)
+- **YAML ↔ JSON Converter** - Bidirectional conversion between YAML and JSON formats
+- **SQL Formatter** - Format and beautify SQL queries with keyword capitalization
+- **QR Code Generator** - Generate QR codes from text or URLs as SVG/PNG
+- **Password Generator** - Generate secure random passwords with entropy strength indicator
+- **CIDR Calculator** - Calculate subnet masks, network ranges, and host counts
+- **Ed25519 Key Tool** - Generate Ed25519 key pairs, sign and verify data
+- **Text Diff** - Compare two texts side-by-side with color-coded differences
+- **Image Converter** - Convert between PNG, JPEG, and WebP formats (Rust backend)
+- **Encoding Converter** - Detect and convert text file encodings (UTF-8, GBK, Shift-JIS, etc.)
 
 ## Tech Stack
 

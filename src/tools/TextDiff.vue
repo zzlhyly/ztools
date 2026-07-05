@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { diffLines } from 'diff'
 import { useAppStore } from '@/stores/app'
@@ -150,11 +150,6 @@ const toggleView = () => {
   if (showUnified.value && hasDiff.value) {
     buildUnifiedDiff()
   }
-}
-
-const handleCopy = () => {
-  if (!hasDiff.value || !showUnified.value) return
-  navigator.clipboard.writeText(unifiedDiff.value)
 }
 </script>
 
