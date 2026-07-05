@@ -37,7 +37,7 @@ describe('TimestampConverter', () => {
     await input.setValue('1609459200')
 
     const buttons = wrapper.findAll('button')
-    const convertButton = buttons.find(b => b.text().includes('Convert'))!
+    const convertButton = buttons.find((b) => b.text().includes('Convert'))!
     await convertButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -52,7 +52,7 @@ describe('TimestampConverter', () => {
     await input.setValue('2021-01-01T00:00:00')
 
     const buttons = wrapper.findAll('button')
-    const convertButton = buttons.find(b => b.text().includes('Convert'))!
+    const convertButton = buttons.find((b) => b.text().includes('Convert'))!
     await convertButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -69,11 +69,11 @@ describe('TimestampConverter', () => {
     await input.setValue('1609459200000')
 
     const radios = wrapper.findAll('.el-radio')
-    const msRadioInput = radios.find(r => r.text().includes('Milliseconds'))!.find('input')
+    const msRadioInput = radios.find((r) => r.text().includes('Milliseconds'))!.find('input')
     await msRadioInput.setValue(true)
 
     const buttons = wrapper.findAll('button')
-    const convertButton = buttons.find(b => b.text().includes('Convert'))!
+    const convertButton = buttons.find((b) => b.text().includes('Convert'))!
     await convertButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -88,7 +88,7 @@ describe('TimestampConverter', () => {
     await input.setValue('1609459200')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect((input.element as HTMLInputElement).value).toBe('')

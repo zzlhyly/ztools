@@ -3,7 +3,7 @@ import router from '../index'
 
 describe('Router', () => {
   it('should have routes for all tools', () => {
-    const routePaths = router.options.routes.map(r => r.path)
+    const routePaths = router.options.routes.map((r) => r.path)
     expect(routePaths).toContain('/')
     expect(routePaths).toContain('/json')
     expect(routePaths).toContain('/xml')
@@ -18,7 +18,7 @@ describe('Router', () => {
   })
 
   it('should redirect root to /json', () => {
-    const rootRoute = router.options.routes.find(r => r.path === '/')
+    const rootRoute = router.options.routes.find((r) => r.path === '/')
     expect(rootRoute?.redirect).toBe('/json')
   })
 

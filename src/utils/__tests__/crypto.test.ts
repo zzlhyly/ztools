@@ -1,13 +1,31 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeAll } from 'vitest'
 import {
-  CryptoError, arrayBufferToBase64, base64ToArrayBuffer,
-  arrayBufferToHex, hexToArrayBuffer, detectKeyFormat,
-  parseKeyBytes, padPKCS7, unpadPKCS7, padZero, unpadZero,
-  generateAesKey, generateAesIv, aesEncrypt, aesDecrypt,
-  generateRsaKeyPair, importRsaPublicKey, importRsaPrivateKey, getRsaMaxPayload,
-  rsaEncrypt, rsaDecrypt, rsaSign, rsaVerify,
-  computeHmac, generateUuids,
+  CryptoError,
+  arrayBufferToBase64,
+  base64ToArrayBuffer,
+  arrayBufferToHex,
+  hexToArrayBuffer,
+  detectKeyFormat,
+  parseKeyBytes,
+  padPKCS7,
+  unpadPKCS7,
+  padZero,
+  unpadZero,
+  generateAesKey,
+  generateAesIv,
+  aesEncrypt,
+  aesDecrypt,
+  generateRsaKeyPair,
+  importRsaPublicKey,
+  importRsaPrivateKey,
+  getRsaMaxPayload,
+  rsaEncrypt,
+  rsaDecrypt,
+  rsaSign,
+  rsaVerify,
+  computeHmac,
+  generateUuids,
 } from '../crypto'
 
 describe('CryptoError', () => {
@@ -28,10 +46,10 @@ describe('arrayBufferToBase64', () => {
     expect(arrayBufferToBase64(buf)).toBe('aGVsbG8=')
   })
   it('binary byte 0xFB -> "+w=="', () => {
-    expect(arrayBufferToBase64(new Uint8Array([0xFB]).buffer)).toBe('+w==')
+    expect(arrayBufferToBase64(new Uint8Array([0xfb]).buffer)).toBe('+w==')
   })
   it('0x00,0x00,0x00 -> "AAAA"', () => {
-    expect(arrayBufferToBase64(new Uint8Array([0,0,0]).buffer)).toBe('AAAA')
+    expect(arrayBufferToBase64(new Uint8Array([0, 0, 0]).buffer)).toBe('AAAA')
   })
 })
 
@@ -55,10 +73,10 @@ describe('arrayBufferToHex', () => {
     expect(arrayBufferToHex(new Uint8Array([]).buffer)).toBe('')
   })
   it('0xDE,0xAD,0xBE,0xEF -> "deadbeef"', () => {
-    expect(arrayBufferToHex(new Uint8Array([0xDE,0xAD,0xBE,0xEF]).buffer)).toBe('deadbeef')
+    expect(arrayBufferToHex(new Uint8Array([0xde, 0xad, 0xbe, 0xef]).buffer)).toBe('deadbeef')
   })
   it('0x00,0x01 -> "0001" (leading zero preserved)', () => {
-    expect(arrayBufferToHex(new Uint8Array([0,1]).buffer)).toBe('0001')
+    expect(arrayBufferToHex(new Uint8Array([0, 1]).buffer)).toBe('0001')
   })
   it('0xFF -> "ff" (single byte)', () => {
     expect(arrayBufferToHex(new Uint8Array([255]).buffer)).toBe('ff')
@@ -70,13 +88,19 @@ describe('hexToArrayBuffer', () => {
     expect(new Uint8Array(hexToArrayBuffer('')).length).toBe(0)
   })
   it('"deadbeef" -> [0xDE,0xAD,0xBE,0xEF]', () => {
-    expect(Array.from(new Uint8Array(hexToArrayBuffer('deadbeef')))).toEqual([0xDE,0xAD,0xBE,0xEF])
+    expect(Array.from(new Uint8Array(hexToArrayBuffer('deadbeef')))).toEqual([
+      0xde, 0xad, 0xbe, 0xef,
+    ])
   })
   it('"DEADBEEF" uppercase -> same', () => {
-    expect(Array.from(new Uint8Array(hexToArrayBuffer('DEADBEEF')))).toEqual([0xDE,0xAD,0xBE,0xEF])
+    expect(Array.from(new Uint8Array(hexToArrayBuffer('DEADBEEF')))).toEqual([
+      0xde, 0xad, 0xbe, 0xef,
+    ])
   })
   it('"DeAdBeEf" mixed case -> same', () => {
-    expect(Array.from(new Uint8Array(hexToArrayBuffer('DeAdBeEf')))).toEqual([0xDE,0xAD,0xBE,0xEF])
+    expect(Array.from(new Uint8Array(hexToArrayBuffer('DeAdBeEf')))).toEqual([
+      0xde, 0xad, 0xbe, 0xef,
+    ])
   })
   it('throws on odd length "abc"', () => {
     expect(() => hexToArrayBuffer('abc')).toThrow(CryptoError)
@@ -106,7 +130,7 @@ describe('detectKeyFormat', () => {
 
 describe('parseKeyBytes', () => {
   it('hex key "deadbeef" -> [0xDE,0xAD,0xBE,0xEF]', () => {
-    expect(Array.from(parseKeyBytes('deadbeef'))).toEqual([0xDE,0xAD,0xBE,0xEF])
+    expect(Array.from(parseKeyBytes('deadbeef'))).toEqual([0xde, 0xad, 0xbe, 0xef])
   })
   it('text key "hello" -> UTF-8 bytes', () => {
     expect(new TextDecoder().decode(parseKeyBytes('hello'))).toBe('hello')
@@ -118,29 +142,29 @@ describe('parseKeyBytes', () => {
 
 describe('padPKCS7', () => {
   it('[1,2,3] pad to 16 -> 13 bytes of 0x0D appended', () => {
-    const r = padPKCS7(new Uint8Array([1,2,3]), 16)
+    const r = padPKCS7(new Uint8Array([1, 2, 3]), 16)
     expect(r.length).toBe(16)
-    for (let i=3;i<16;i++) expect(r[i]).toBe(13)
+    for (let i = 3; i < 16; i++) expect(r[i]).toBe(13)
   })
   it('full 16 bytes -> 16 bytes of 0x10 appended', () => {
-    const r = padPKCS7(new Uint8Array(16).fill(0xAA), 16)
+    const r = padPKCS7(new Uint8Array(16).fill(0xaa), 16)
     expect(r.length).toBe(32)
-    for (let i=16;i<32;i++) expect(r[i]).toBe(16)
+    for (let i = 16; i < 32; i++) expect(r[i]).toBe(16)
   })
   it('block size 8: [1] -> 7 bytes of 0x07', () => {
     const r = padPKCS7(new Uint8Array([1]), 8)
     expect(r.length).toBe(8)
-    for (let i=1;i<8;i++) expect(r[i]).toBe(7)
+    for (let i = 1; i < 8; i++) expect(r[i]).toBe(7)
   })
 })
 
 describe('unpadPKCS7', () => {
   it('remove valid PKCS7 padding', () => {
-    const d = new Uint8Array([1,2,3,...Array(13).fill(13)])
-    expect(Array.from(unpadPKCS7(d, 16))).toEqual([1,2,3])
+    const d = new Uint8Array([1, 2, 3, ...Array(13).fill(13)])
+    expect(Array.from(unpadPKCS7(d, 16))).toEqual([1, 2, 3])
   })
   it('throws on invalid pad value 0xFF', () => {
-    const d = new Uint8Array([1,2,3,...Array(13).fill(0xFF)])
+    const d = new Uint8Array([1, 2, 3, ...Array(13).fill(0xff)])
     expect(() => unpadPKCS7(d, 16)).toThrow(CryptoError)
   })
   it('throws on zero pad value', () => {
@@ -153,18 +177,20 @@ describe('unpadPKCS7', () => {
 
 describe('padZero / unpadZero', () => {
   it('pad [1,2,3] to 16', () => {
-    const r = padZero(new Uint8Array([1,2,3]), 16)
+    const r = padZero(new Uint8Array([1, 2, 3]), 16)
     expect(r.length).toBe(16)
-    expect(r[0]).toBe(1); expect(r[2]).toBe(3); expect(r[15]).toBe(0)
+    expect(r[0]).toBe(1)
+    expect(r[2]).toBe(3)
+    expect(r[15]).toBe(0)
   })
   it('unpad trailing zeros', () => {
-    expect(Array.from(unpadZero(new Uint8Array([1,2,3,0,0,0])))).toEqual([1,2,3])
+    expect(Array.from(unpadZero(new Uint8Array([1, 2, 3, 0, 0, 0])))).toEqual([1, 2, 3])
   })
   it('unpad all zeros -> empty', () => {
-    expect(unpadZero(new Uint8Array([0,0,0])).length).toBe(0)
+    expect(unpadZero(new Uint8Array([0, 0, 0])).length).toBe(0)
   })
   it('already block-aligned: returns same content', () => {
-    const data = new Uint8Array([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16])
+    const data = new Uint8Array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])
     const result = padZero(data, 16)
     expect(result.length).toBe(16)
     expect(Array.from(result)).toEqual(Array.from(data))
@@ -185,10 +211,10 @@ describe('generateAesIv', () => {
 })
 
 describe('aesEncrypt + aesDecrypt (real crypto.subtle)', () => {
-  const keyHex256='603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4'
-  const keyHex128='2b7e151628aed2a6abf7158809cf4f3c'
-  const keyHex192='8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b'
-  const ivHex='000102030405060708090a0b0c0d0e0f'
+  const keyHex256 = '603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4'
+  const keyHex128 = '2b7e151628aed2a6abf7158809cf4f3c'
+  const keyHex192 = '8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b'
+  const ivHex = '000102030405060708090a0b0c0d0e0f'
 
   it('encrypt + decrypt AES-256-CBC PKCS7 roundtrip', async () => {
     const c = await aesEncrypt('Hello World', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
@@ -200,8 +226,17 @@ describe('aesEncrypt + aesDecrypt (real crypto.subtle)', () => {
     expect(await aesDecrypt(c, keyHex256, ivHex, 'CBC', 256, 'PKCS7')).toBe('')
   })
   it('unicode roundtrip', async () => {
-    const c = await aesEncrypt('\u4f60\u597d\u4e16\u754c\ud83c\udf0d', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
-    expect(await aesDecrypt(c, keyHex256, ivHex, 'CBC', 256, 'PKCS7')).toBe('\u4f60\u597d\u4e16\u754c\ud83c\udf0d')
+    const c = await aesEncrypt(
+      '\u4f60\u597d\u4e16\u754c\ud83c\udf0d',
+      keyHex256,
+      ivHex,
+      'CBC',
+      256,
+      'PKCS7',
+    )
+    expect(await aesDecrypt(c, keyHex256, ivHex, 'CBC', 256, 'PKCS7')).toBe(
+      '\u4f60\u597d\u4e16\u754c\ud83c\udf0d',
+    )
   })
   it('AES-128 roundtrip', async () => {
     const c = await aesEncrypt('test', keyHex128, ivHex, 'CBC', 128, 'PKCS7')
@@ -223,17 +258,25 @@ describe('aesEncrypt + aesDecrypt (real crypto.subtle)', () => {
   it('decrypt with wrong key throws', async () => {
     const wrongKey = '000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f'
     const c = await aesEncrypt('secret', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
-    await expect(aesDecrypt(c, wrongKey, ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/Decryption failed/)
+    await expect(aesDecrypt(c, wrongKey, ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(
+      /Decryption failed/,
+    )
   })
   it('decrypt with wrong IV throws', async () => {
     const c = await aesEncrypt('secret', keyHex256, ivHex, 'CBC', 256, 'PKCS7')
-    await expect(aesDecrypt(c, keyHex256, 'ffffffffffffffffffffffffffffffff', 'CBC', 256, 'PKCS7')).rejects.toThrow(/Decryption failed/)
+    await expect(
+      aesDecrypt(c, keyHex256, 'ffffffffffffffffffffffffffffffff', 'CBC', 256, 'PKCS7'),
+    ).rejects.toThrow(/Decryption failed/)
   })
   it('reject short key', async () => {
-    await expect(aesEncrypt('test', 'dead', ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(/Key length/)
+    await expect(aesEncrypt('test', 'dead', ivHex, 'CBC', 256, 'PKCS7')).rejects.toThrow(
+      /Key length/,
+    )
   })
   it('reject short IV for CBC', async () => {
-    await expect(aesEncrypt('test', keyHex256, '0001', 'CBC', 256, 'PKCS7')).rejects.toThrow(/IV length/)
+    await expect(aesEncrypt('test', keyHex256, '0001', 'CBC', 256, 'PKCS7')).rejects.toThrow(
+      /IV length/,
+    )
   })
   it('generateAesKey produces usable 256-bit key', async () => {
     const gk = await generateAesKey(256)
@@ -266,7 +309,9 @@ describe('generateRsaKeyPair', () => {
 
 describe('importRsaPublicKey', () => {
   let validPem: string
-  beforeAll(async () => { validPem = (await generateRsaKeyPair(2048)).publicKey })
+  beforeAll(async () => {
+    validPem = (await generateRsaKeyPair(2048)).publicKey
+  })
   it('import for encryption -> RSA-OAEP key', async () => {
     const key = await importRsaPublicKey(validPem, true)
     expect(key.type).toBe('public')
@@ -287,7 +332,9 @@ describe('importRsaPublicKey', () => {
 
 describe('importRsaPrivateKey', () => {
   let validPem: string
-  beforeAll(async () => { validPem = (await generateRsaKeyPair(2048)).privateKey })
+  beforeAll(async () => {
+    validPem = (await generateRsaKeyPair(2048)).privateKey
+  })
   it('imports valid PEM', async () => {
     const key = await importRsaPrivateKey(validPem)
     expect(key.type).toBe('private')
@@ -312,24 +359,42 @@ describe('getRsaMaxPayload', () => {
     expect(getRsaMaxPayload(2048, 'PKCS#1 v1.5')).toBe(245)
   })
   it('scales with key size', () => {
-    expect(getRsaMaxPayload(4096,'PKCS#1 v1.5')).toBeGreaterThan(getRsaMaxPayload(2048,'PKCS#1 v1.5'))
+    expect(getRsaMaxPayload(4096, 'PKCS#1 v1.5')).toBeGreaterThan(
+      getRsaMaxPayload(2048, 'PKCS#1 v1.5'),
+    )
   })
 })
 
 describe('rsaEncrypt + rsaDecrypt', () => {
-  let pubPem: string; let privPem: string
+  let pubPem: string
+  let privPem: string
   beforeAll(async () => {
     const k = await generateRsaKeyPair(2048)
-    pubPem = k.publicKey; privPem = k.privateKey
+    pubPem = k.publicKey
+    privPem = k.privateKey
   })
   it('roundtrip OAEP-SHA256', async () => {
-    expect(await rsaDecrypt(await rsaEncrypt('Hello RSA!', pubPem, 'OAEP-SHA256'), privPem, 'OAEP-SHA256')).toBe('Hello RSA!')
+    expect(
+      await rsaDecrypt(
+        await rsaEncrypt('Hello RSA!', pubPem, 'OAEP-SHA256'),
+        privPem,
+        'OAEP-SHA256',
+      ),
+    ).toBe('Hello RSA!')
   })
   it('roundtrip PKCS#1 v1.5', async () => {
-    expect(await rsaDecrypt(await rsaEncrypt('PKCS1 test', pubPem, 'PKCS#1 v1.5'), privPem, 'PKCS#1 v1.5')).toBe('PKCS1 test')
+    expect(
+      await rsaDecrypt(
+        await rsaEncrypt('PKCS1 test', pubPem, 'PKCS#1 v1.5'),
+        privPem,
+        'PKCS#1 v1.5',
+      ),
+    ).toBe('PKCS1 test')
   })
   it('empty string roundtrip', async () => {
-    expect(await rsaDecrypt(await rsaEncrypt('', pubPem, 'OAEP-SHA256'), privPem, 'OAEP-SHA256')).toBe('')
+    expect(
+      await rsaDecrypt(await rsaEncrypt('', pubPem, 'OAEP-SHA256'), privPem, 'OAEP-SHA256'),
+    ).toBe('')
   })
   it('OAEP produces different ciphertexts', async () => {
     const c1 = await rsaEncrypt('test', pubPem, 'OAEP-SHA256')
@@ -347,10 +412,12 @@ describe('rsaEncrypt + rsaDecrypt', () => {
 })
 
 describe('rsaSign + rsaVerify', () => {
-  let pubPem: string; let privPem: string
+  let pubPem: string
+  let privPem: string
   beforeAll(async () => {
     const k = await generateRsaKeyPair(2048)
-    pubPem = k.publicKey; privPem = k.privateKey
+    pubPem = k.publicKey
+    privPem = k.privateKey
   })
   it('sign+verify PSS-SHA256', async () => {
     const sig = await rsaSign('Sign this', privPem, 'PSS-SHA256')
@@ -374,7 +441,9 @@ describe('rsaSign + rsaVerify', () => {
     expect(await rsaVerify(sig, '', pubPem, 'PSS-SHA256')).toBe(true)
   })
   it('PSS produces different signatures', async () => {
-    expect(await rsaSign('test', privPem, 'PSS-SHA256')).not.toBe(await rsaSign('test', privPem, 'PSS-SHA256'))
+    expect(await rsaSign('test', privPem, 'PSS-SHA256')).not.toBe(
+      await rsaSign('test', privPem, 'PSS-SHA256'),
+    )
   })
 })
 
@@ -391,7 +460,8 @@ describe('RSA key dual-use', () => {
 describe('computeHmac', () => {
   it('HMAC-SHA256 with text key', async () => {
     const r = await computeHmac('hello', 'secret', 'SHA-256')
-    expect(r).toHaveLength(64); expect(/^[0-9a-f]+$/.test(r)).toBe(true)
+    expect(r).toHaveLength(64)
+    expect(/^[0-9a-f]+$/.test(r)).toBe(true)
   })
   it('HMAC-SHA256 with hex key', async () => {
     const r = await computeHmac('Hi There', '0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b', 'SHA-256')
@@ -416,21 +486,29 @@ describe('computeHmac', () => {
     expect((await computeHmac('\u4f60\u597d', '\u5bc6\u94a5', 'SHA-256')).length).toBe(64)
   })
   it('different keys -> different results', async () => {
-    expect(await computeHmac('hello','k1','SHA-256')).not.toBe(await computeHmac('hello','k2','SHA-256'))
+    expect(await computeHmac('hello', 'k1', 'SHA-256')).not.toBe(
+      await computeHmac('hello', 'k2', 'SHA-256'),
+    )
   })
   it('different algorithms -> different results', async () => {
-    expect(await computeHmac('hello','key','SHA-256')).not.toBe(await computeHmac('hello','key','SHA-512'))
+    expect(await computeHmac('hello', 'key', 'SHA-256')).not.toBe(
+      await computeHmac('hello', 'key', 'SHA-512'),
+    )
   })
 })
 
 describe('generateUuids', () => {
   it('1 UUID', () => {
     const uuids = generateUuids(1)
-    expect(uuids[0]).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/)
+    expect(uuids[0]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+    )
   })
   it('5 UUIDs', () => {
     expect(generateUuids(5).length).toBe(5)
-    generateUuids(5).forEach(u => expect(u).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/))
+    generateUuids(5).forEach((u) =>
+      expect(u).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/),
+    )
   })
   it('100 unique UUIDs', () => {
     expect(new Set(generateUuids(100)).size).toBe(100)

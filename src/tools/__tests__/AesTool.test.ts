@@ -24,7 +24,9 @@ vi.mock('@/utils/crypto', () => ({
   generateAesIv: vi.fn().mockReturnValue('00112233445566778899aabbccddeeff'),
   CryptoError: class CryptoError extends Error {
     name = 'CryptoError'
-    constructor(m: string) { super(m) }
+    constructor(m: string) {
+      super(m)
+    }
   },
   arrayBufferToHex: vi.fn().mockReturnValue('hex'),
   base64ToArrayBuffer: vi.fn().mockReturnValue(new ArrayBuffer(0)),
@@ -61,9 +63,9 @@ describe('AesTool', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons.filter(b => b.text().includes('Encrypt')).length).toBe(1)
-    expect(buttons.filter(b => b.text().includes('Decrypt')).length).toBe(1)
-    expect(buttons.filter(b => b.text().includes('Clear')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Encrypt')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Decrypt')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Clear')).length).toBe(1)
   })
 
   it('should render key and IV input fields', () => {
@@ -82,7 +84,7 @@ describe('AesTool', () => {
     await textarea.setValue('test input')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect(textarea.element.value).toBe('')

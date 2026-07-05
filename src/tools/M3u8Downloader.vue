@@ -39,7 +39,9 @@ const activeTasks = computed(() =>
 )
 
 const completedTasks = computed(() =>
-  store.tasks.filter((t) => t.status === 'done' || t.status === 'error' || t.status === 'cancelled'),
+  store.tasks.filter(
+    (t) => t.status === 'done' || t.status === 'error' || t.status === 'cancelled',
+  ),
 )
 
 let unlistenProgress: (() => void) | null = null
@@ -475,7 +477,10 @@ onUnmounted(() => {
                   :model-value="store.config.headers.referer"
                   placeholder="https://example.com/"
                   size="small"
-                  @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, referer: v } })"
+                  @update:model-value="
+                    (v: string) =>
+                      store.updateConfig({ headers: { ...store.config.headers, referer: v } })
+                  "
                 />
               </td>
               <td />
@@ -487,7 +492,10 @@ onUnmounted(() => {
                   :model-value="store.config.headers.cookie"
                   placeholder="session=abc123"
                   size="small"
-                  @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, cookie: v } })"
+                  @update:model-value="
+                    (v: string) =>
+                      store.updateConfig({ headers: { ...store.config.headers, cookie: v } })
+                  "
                 />
               </td>
               <td />
@@ -501,7 +509,13 @@ onUnmounted(() => {
                   :model-value="item.key"
                   placeholder="Header Name"
                   size="small"
-                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: v, value: c[index]?.value || '' }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }"
+                  @update:model-value="
+                    (v: string) => {
+                      const c = [...store.config.headers.custom]
+                      c[index] = { key: v, value: c[index]?.value || '' }
+                      store.updateConfig({ headers: { ...store.config.headers, custom: c } })
+                    }
+                  "
                 />
               </td>
               <td>
@@ -509,7 +523,13 @@ onUnmounted(() => {
                   :model-value="item.value"
                   placeholder="Header Value"
                   size="small"
-                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: c[index]?.key || '', value: v }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }"
+                  @update:model-value="
+                    (v: string) => {
+                      const c = [...store.config.headers.custom]
+                      c[index] = { key: c[index]?.key || '', value: v }
+                      store.updateConfig({ headers: { ...store.config.headers, custom: c } })
+                    }
+                  "
                 />
               </td>
               <td>
@@ -517,7 +537,14 @@ onUnmounted(() => {
                   :icon="X"
                   size="small"
                   circle
-                  @click="() => { const c = store.config.headers.custom.filter((_: any, i: number) => i !== index); store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }"
+                  @click="
+                    () => {
+                      const c = store.config.headers.custom.filter(
+                        (_: any, i: number) => i !== index,
+                      )
+                      store.updateConfig({ headers: { ...store.config.headers, custom: c } })
+                    }
+                  "
                 />
               </td>
             </tr>
@@ -526,7 +553,15 @@ onUnmounted(() => {
         <el-button
           size="small"
           style="margin-top: 8px"
-          @click="() => store.updateConfig({ headers: { ...store.config.headers, custom: [...store.config.headers.custom, { key: '', value: '' }] } })"
+          @click="
+            () =>
+              store.updateConfig({
+                headers: {
+                  ...store.config.headers,
+                  custom: [...store.config.headers.custom, { key: '', value: '' }],
+                },
+              })
+          "
         >
           + 添加 Header
         </el-button>
@@ -585,7 +620,8 @@ onUnmounted(() => {
     >
       <div class="quality-list">
         <div
-          v-for="q in store.tasks.find(t => t.status === 'selecting_quality')?.qualityOptions || []"
+          v-for="q in store.tasks.find((t) => t.status === 'selecting_quality')?.qualityOptions ||
+            []"
           :key="q.url"
           class="quality-item"
           @click="handleSelectQuality(q.url, q.resolution)"
@@ -765,9 +801,15 @@ onUnmounted(() => {
   vertical-align: middle;
 }
 
-.col-key { width: 35%; }
-.col-value { flex: 1; }
-.col-action { width: 40px; }
+.col-key {
+  width: 35%;
+}
+.col-value {
+  flex: 1;
+}
+.col-action {
+  width: 40px;
+}
 
 .path-input-row {
   display: flex;
@@ -775,7 +817,9 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.path-input-row .el-input { flex: 1; }
+.path-input-row .el-input {
+  flex: 1;
+}
 
 .header-key-label {
   font-size: var(--font-size-xs, 12px);

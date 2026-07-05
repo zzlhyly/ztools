@@ -4,12 +4,10 @@ import { ref, computed, watch } from 'vue'
 export const useAppStore = defineStore('app', () => {
   // State
   const theme = ref<'light' | 'dark' | 'system'>(
-    (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system'
+    (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system',
   )
   const sidebarCollapsed = ref(false)
-  const recentTools = ref<string[]>(
-    JSON.parse(localStorage.getItem('recentTools') || '[]')
-  )
+  const recentTools = ref<string[]>(JSON.parse(localStorage.getItem('recentTools') || '[]'))
   const locale = ref(localStorage.getItem('locale') || 'zh-CN')
 
   // Computed - 自动响应 theme 变化
@@ -26,9 +24,13 @@ export const useAppStore = defineStore('app', () => {
   })
 
   // Watch isDark changes and update DOM class
-  watch(isDark, (dark) => {
-    document.documentElement.classList.toggle('dark', dark)
-  }, { immediate: true })
+  watch(
+    isDark,
+    (dark) => {
+      document.documentElement.classList.toggle('dark', dark)
+    },
+    { immediate: true },
+  )
 
   // Watch locale changes
   watch(locale, (newLocale) => {
@@ -49,7 +51,7 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function addRecentTool(path: string) {
-    const filtered = recentTools.value.filter(p => p !== path)
+    const filtered = recentTools.value.filter((p) => p !== path)
     recentTools.value = [path, ...filtered].slice(0, 10)
     localStorage.setItem('recentTools', JSON.stringify(recentTools.value))
   }

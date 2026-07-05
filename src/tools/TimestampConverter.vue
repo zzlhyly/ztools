@@ -28,9 +28,10 @@ const handleConvert = () => {
       if (isNaN(date.getTime())) {
         throw new Error('Invalid date')
       }
-      output.value = unit.value === 'ms'
-        ? date.getTime().toString()
-        : Math.floor(date.getTime() / 1000).toString()
+      output.value =
+        unit.value === 'ms'
+          ? date.getTime().toString()
+          : Math.floor(date.getTime() / 1000).toString()
     }
     ElMessage.success(t('common.success'))
   } catch {

@@ -40,11 +40,11 @@ describe('RegexTester', () => {
     await testInput.setValue('abc123def456')
 
     const checkboxes = wrapper.findAll('.el-checkbox')
-    const gCheckboxInput = checkboxes.find(c => c.text().includes('global'))!.find('input')
+    const gCheckboxInput = checkboxes.find((c) => c.text().includes('global'))!.find('input')
     await gCheckboxInput.setValue(true)
 
     const buttons = wrapper.findAll('button')
-    const testButton = buttons.find(b => b.text().includes('Test'))!
+    const testButton = buttons.find((b) => b.text().includes('Test'))!
     await testButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -63,11 +63,11 @@ describe('RegexTester', () => {
     await testInput.setValue('1 2 3')
 
     const checkboxes = wrapper.findAll('.el-checkbox')
-    const gCheckboxInput = checkboxes.find(c => c.text().includes('global'))!.find('input')
+    const gCheckboxInput = checkboxes.find((c) => c.text().includes('global'))!.find('input')
     await gCheckboxInput.setValue(true)
 
     const buttons = wrapper.findAll('button')
-    const testButton = buttons.find(b => b.text().includes('Test'))!
+    const testButton = buttons.find((b) => b.text().includes('Test'))!
     await testButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -87,7 +87,7 @@ describe('RegexTester', () => {
     await testInput.setValue('no numbers here')
 
     const buttons = wrapper.findAll('button')
-    const testButton = buttons.find(b => b.text().includes('Test'))!
+    const testButton = buttons.find((b) => b.text().includes('Test'))!
     await testButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -102,7 +102,7 @@ describe('RegexTester', () => {
     await regexInput.setValue('\\d+')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect((regexInput.element as HTMLInputElement).value).toBe('')

@@ -2,7 +2,12 @@
 import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
-import { generateRsaKeyPair, arrayBufferToHex, base64ToArrayBuffer, CryptoError } from '@/utils/crypto'
+import {
+  generateRsaKeyPair,
+  arrayBufferToHex,
+  base64ToArrayBuffer,
+  CryptoError,
+} from '@/utils/crypto'
 import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
 import CodeOutput from '@/components/CodeOutput.vue'
@@ -20,7 +25,10 @@ const KEY_SIZES = [1024, 2048, 4096] as const
 const FORMATS = ['PEM', 'DER'] as const
 
 function pemToDer(pem: string): ArrayBuffer {
-  const lines = pem.trim().split('\n').filter(line => !line.startsWith('-----'))
+  const lines = pem
+    .trim()
+    .split('\n')
+    .filter((line) => !line.startsWith('-----'))
   return base64ToArrayBuffer(lines.join(''))
 }
 

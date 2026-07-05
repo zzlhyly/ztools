@@ -37,7 +37,7 @@ describe('Base64Tool', () => {
     await textarea.setValue('Hello World')
 
     const buttons = wrapper.findAll('button')
-    const encodeButton = buttons.find(b => b.text().includes('Encode'))!
+    const encodeButton = buttons.find((b) => b.text().includes('Encode'))!
     await encodeButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -52,7 +52,7 @@ describe('Base64Tool', () => {
     await textarea.setValue('SGVsbG8gV29ybGQ=')
 
     const buttons = wrapper.findAll('button')
-    const decodeButton = buttons.find(b => b.text().includes('Decode'))!
+    const decodeButton = buttons.find((b) => b.text().includes('Decode'))!
     await decodeButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -67,7 +67,7 @@ describe('Base64Tool', () => {
     await textarea.setValue('你好世界')
 
     const buttons = wrapper.findAll('button')
-    const encodeButton = buttons.find(b => b.text().includes('Encode'))!
+    const encodeButton = buttons.find((b) => b.text().includes('Encode'))!
     await encodeButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -82,7 +82,7 @@ describe('Base64Tool', () => {
     await textarea.setValue('test')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect(textarea.element.value).toBe('')

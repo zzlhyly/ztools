@@ -5,7 +5,8 @@
 import { invoke } from '@tauri-apps/api/core'
 import { TauriError } from '@/utils/errors'
 
-export type HashAlgorithm = 'MD5' | 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512' | 'SHA3-256' | 'SHA3-512'
+export type HashAlgorithm =
+  'MD5' | 'SHA-1' | 'SHA-256' | 'SHA-384' | 'SHA-512' | 'SHA3-256' | 'SHA3-512'
 
 export interface HashAlgorithmEntry {
   label: string
@@ -73,9 +74,7 @@ function md5StringToBytes(s: string): number[] {
 function md5BytesToWords(bytes: number[]): number[] {
   const words: number[] = []
   for (let i = 0; i < bytes.length; i += 4) {
-    words.push(
-      ((bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24)) >>> 0),
-    )
+    words.push((bytes[i] | (bytes[i + 1] << 8) | (bytes[i + 2] << 16) | (bytes[i + 3] << 24)) >>> 0)
   }
   return words
 }
@@ -100,15 +99,14 @@ export function calculateMd5(input: string): string {
   // T-table: T[i] = floor(2³² × |sin(i+1)|)
   const T: number[] = []
   for (let i = 1; i <= 64; i++) {
-    T.push((Math.floor(Math.abs(Math.sin(i)) * 0x100000000)) >>> 0)
+    T.push(Math.floor(Math.abs(Math.sin(i)) * 0x100000000) >>> 0)
   }
 
   // shift amounts per round
   const shifts: number[] = [
-    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22,
-    5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9, 14, 20,
-    4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23,
-    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
+    7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 7, 12, 17, 22, 5, 9, 14, 20, 5, 9, 14, 20, 5, 9,
+    14, 20, 5, 9, 14, 20, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 4, 11, 16, 23, 6, 10, 15, 21,
+    6, 10, 15, 21, 6, 10, 15, 21, 6, 10, 15, 21,
   ]
 
   const words = md5BytesToWords(bytes)
@@ -216,7 +214,10 @@ export async function sha512(input: string): Promise<string> {
 // hashFile — calls Rust backend with path + algorithm
 // ---------------------------------------------------------------------------
 
-export async function hashFile(path: string, algorithm: HashAlgorithm = 'SHA-256'): Promise<string> {
+export async function hashFile(
+  path: string,
+  algorithm: HashAlgorithm = 'SHA-256',
+): Promise<string> {
   try {
     return await invoke<string>('hash_file', { path, algorithm })
   } catch (e) {

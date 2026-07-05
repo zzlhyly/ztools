@@ -37,7 +37,7 @@ describe('JsonFormatter', () => {
     await textarea.setValue('{"name":"test","age":18}')
 
     const buttons = wrapper.findAll('button')
-    const formatButton = buttons.find(b => b.text().includes('Format'))!
+    const formatButton = buttons.find((b) => b.text().includes('Format'))!
     await formatButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -53,7 +53,7 @@ describe('JsonFormatter', () => {
     await textarea.setValue('{invalid}')
 
     const buttons = wrapper.findAll('button')
-    const formatButton = buttons.find(b => b.text().includes('Format'))!
+    const formatButton = buttons.find((b) => b.text().includes('Format'))!
     await formatButton.trigger('click')
 
     expect(wrapper.find('.el-alert').exists()).toBe(true)
@@ -67,7 +67,7 @@ describe('JsonFormatter', () => {
     await textarea.setValue('{\n  "name": "test",\n  "age": 18\n}')
 
     const buttons = wrapper.findAll('button')
-    const minifyButton = buttons.find(b => b.text().includes('Minify'))!
+    const minifyButton = buttons.find((b) => b.text().includes('Minify'))!
     await minifyButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -82,7 +82,7 @@ describe('JsonFormatter', () => {
     await textarea.setValue('{"test": true}')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect(textarea.element.value).toBe('')

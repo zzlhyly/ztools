@@ -117,8 +117,10 @@ export function unpadZero(data: Uint8Array): Uint8Array {
 // ============================================================
 
 export async function generateAesKey(bitLength: 128 | 192 | 256): Promise<string> {
-  const key = await crypto.subtle.generateKey(
-    { name: 'AES-CBC', length: bitLength }, true, ['encrypt', 'decrypt'])
+  const key = await crypto.subtle.generateKey({ name: 'AES-CBC', length: bitLength }, true, [
+    'encrypt',
+    'decrypt',
+  ])
   const exported = await crypto.subtle.exportKey('raw', key)
   return arrayBufferToHex(exported)
 }
@@ -132,18 +134,24 @@ export function generateAesIv(): string {
 const MODES_WITHOUT_WEB_PADDING = ['GCM', 'CTR']
 
 export async function aesEncrypt(
-  plaintext: string, keyHex: string, ivHex: string,
-  mode: string, bitLength: 128 | 192 | 256, padding: string,
+  plaintext: string,
+  keyHex: string,
+  ivHex: string,
+  mode: string,
+  bitLength: 128 | 192 | 256,
+  padding: string,
 ): Promise<string> {
   // Validate key length
   const keyBytes = hexToArrayBuffer(keyHex)
   const expectedLen = bitLength / 8
   if (keyBytes.byteLength !== expectedLen) {
-    throw new CryptoError(`Key length error: expected ${expectedLen} bytes, got ${keyBytes.byteLength}`)
+    throw new CryptoError(
+      `Key length error: expected ${expectedLen} bytes, got ${keyBytes.byteLength}`,
+    )
   }
   // Validate IV
   if (ivHex.length !== 32) {
-    throw new CryptoError(`IV length error: expected 16 bytes, got ${ivHex.length/2}`)
+    throw new CryptoError(`IV length error: expected 16 bytes, got ${ivHex.length / 2}`)
   }
   const ivBuf = hexToArrayBuffer(ivHex)
   // Build algorithm params
@@ -179,17 +187,23 @@ export async function aesEncrypt(
 }
 
 export async function aesDecrypt(
-  input: string, keyHex: string, ivHex: string,
-  mode: string, bitLength: 128 | 192 | 256, padding: string,
+  input: string,
+  keyHex: string,
+  ivHex: string,
+  mode: string,
+  bitLength: 128 | 192 | 256,
+  padding: string,
 ): Promise<string> {
   const keyBytes = hexToArrayBuffer(keyHex)
   const expectedLen = bitLength / 8
   if (keyBytes.byteLength !== expectedLen) {
-    throw new CryptoError(`Key length error: expected ${expectedLen} bytes, got ${keyBytes.byteLength}`)
+    throw new CryptoError(
+      `Key length error: expected ${expectedLen} bytes, got ${keyBytes.byteLength}`,
+    )
   }
   let ivBuf: ArrayBuffer
   if (ivHex.length !== 32) {
-    throw new CryptoError(`IV length error: expected 16 bytes, got ${ivHex.length/2}`)
+    throw new CryptoError(`IV length error: expected 16 bytes, got ${ivHex.length / 2}`)
   }
   ivBuf = hexToArrayBuffer(ivHex)
   const algoParams: any = { name: `AES-${mode}` }
@@ -230,7 +244,10 @@ const PEM_PRIVATE_FOOTER = '-----END PRIVATE KEY-----'
 // ponytail: pkcs1 format not supported by Web Crypto API; modern tools produce pkcs8
 
 function pemToDer(pem: string): ArrayBuffer {
-  const lines = pem.trim().split('\n').filter(line => !line.startsWith('-----'))
+  const lines = pem
+    .trim()
+    .split('\n')
+    .filter((line) => !line.startsWith('-----'))
   return base64ToArrayBuffer(lines.join(''))
 }
 
@@ -243,16 +260,23 @@ function derToPem(der: ArrayBuffer, type: 'PUBLIC KEY' | 'PRIVATE KEY'): string 
 function validatePem(pem: string, header: string, footer: string): ArrayBuffer {
   if (!pem || typeof pem !== 'string') throw new CryptoError('Key format error: empty input')
   const t = pem.trim()
-  if (!t.includes(header) || !t.includes(footer)) throw new CryptoError(`Key format error: expected ${header}`)
-  try { return pemToDer(t) } catch { throw new CryptoError('Key format error: Base64 decode failed') }
+  if (!t.includes(header) || !t.includes(footer))
+    throw new CryptoError(`Key format error: expected ${header}`)
+  try {
+    return pemToDer(t)
+  } catch {
+    throw new CryptoError('Key format error: Base64 decode failed')
+  }
 }
 
 export async function generateRsaKeyPair(
   modulusLength: 1024 | 2048 | 4096 = 2048,
 ): Promise<{ publicKey: string; privateKey: string }> {
   const keyPair = await crypto.subtle.generateKey(
-    { name: 'RSA-OAEP', modulusLength, publicExponent: new Uint8Array([1,0,1]), hash: 'SHA-256' },
-    true, ['encrypt', 'decrypt'])
+    { name: 'RSA-OAEP', modulusLength, publicExponent: new Uint8Array([1, 0, 1]), hash: 'SHA-256' },
+    true,
+    ['encrypt', 'decrypt'],
+  )
   const pubDer = await crypto.subtle.exportKey('spki', keyPair.publicKey)
   const privDer = await crypto.subtle.exportKey('pkcs8', keyPair.privateKey)
   return {
@@ -267,21 +291,38 @@ export async function importRsaPublicKey(pem: string, forEncrypt: boolean): Prom
     ? { name: 'RSA-OAEP', hash: 'SHA-256' }
     : { name: 'RSA-PSS', hash: 'SHA-256' }
   const usages: KeyUsage[] = forEncrypt ? ['encrypt'] : ['verify']
-  try { return await crypto.subtle.importKey('spki', der, algorithm, false, usages) }
-  catch (e: any) { throw new CryptoError(`Key import failed: ${e.message || 'invalid public key'}`) }
+  try {
+    return await crypto.subtle.importKey('spki', der, algorithm, false, usages)
+  } catch (e: any) {
+    throw new CryptoError(`Key import failed: ${e.message || 'invalid public key'}`)
+  }
 }
 
 export async function importRsaPrivateKey(pem: string): Promise<CryptoKey> {
   const der = validatePem(pem, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER)
   try {
-    return await crypto.subtle.importKey('pkcs8', der, { name: 'RSA-OAEP', hash: 'SHA-256' }, false, ['decrypt'])
-  } catch { throw new CryptoError('Key import failed: invalid private key') }
+    return await crypto.subtle.importKey(
+      'pkcs8',
+      der,
+      { name: 'RSA-OAEP', hash: 'SHA-256' },
+      false,
+      ['decrypt'],
+    )
+  } catch {
+    throw new CryptoError('Key import failed: invalid private key')
+  }
 }
 
 export function getRsaMaxPayload(modulusLength: number, padding: string): number {
   const keyBytes = modulusLength / 8
   if (padding === 'PKCS#1 v1.5') return keyBytes - 11
-  const hashBytes = padding.includes('SHA-512') ? 64 : padding.includes('SHA-256') ? 32 : padding.includes('SHA-1') ? 20 : 32
+  const hashBytes = padding.includes('SHA-512')
+    ? 64
+    : padding.includes('SHA-256')
+      ? 32
+      : padding.includes('SHA-1')
+        ? 20
+        : 32
   return keyBytes - 2 * hashBytes - 2
 }
 
@@ -295,74 +336,140 @@ function getOaepHash(padding: string): string {
   return 'SHA-256'
 }
 
-export async function rsaEncrypt(data: string, publicKeyPem: string, padding: string): Promise<string> {
+export async function rsaEncrypt(
+  data: string,
+  publicKeyPem: string,
+  padding: string,
+): Promise<string> {
   const der = validatePem(publicKeyPem, PEM_PUBLIC_HEADER, PEM_PUBLIC_FOOTER)
   const hash = getOaepHash(padding)
-  const key = await crypto.subtle.importKey('spki', der, { name: 'RSA-OAEP', hash }, false, ['encrypt'])
+  const key = await crypto.subtle.importKey('spki', der, { name: 'RSA-OAEP', hash }, false, [
+    'encrypt',
+  ])
   const dataBytes = new TextEncoder().encode(data)
   const maxBytes = getRsaMaxPayload((key.algorithm as any).modulusLength || 2048, padding)
   if (dataBytes.length > maxBytes) {
-    throw new CryptoError(`Input exceeds ${maxBytes} byte limit (${(key.algorithm as any).modulusLength}-bit, ${padding})`)
+    throw new CryptoError(
+      `Input exceeds ${maxBytes} byte limit (${(key.algorithm as any).modulusLength}-bit, ${padding})`,
+    )
   }
   try {
     const cipherBuf = await crypto.subtle.encrypt({ name: 'RSA-OAEP' }, key, dataBytes.buffer)
     return arrayBufferToBase64(cipherBuf)
-  } catch (e: any) { throw new CryptoError(`Encryption failed: check key and padding compatibility`) }
+  } catch (e: any) {
+    throw new CryptoError(`Encryption failed: check key and padding compatibility`)
+  }
 }
 
-export async function rsaDecrypt(cipherB64: string, privateKeyPem: string, padding: string): Promise<string> {
+export async function rsaDecrypt(
+  cipherB64: string,
+  privateKeyPem: string,
+  padding: string,
+): Promise<string> {
   const der = validatePem(privateKeyPem, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER)
   const hash = getOaepHash(padding)
-  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSA-OAEP', hash }, false, ['decrypt'])
+  const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSA-OAEP', hash }, false, [
+    'decrypt',
+  ])
   const cipherData = base64ToArrayBuffer(cipherB64)
   try {
     const plainBuf = await crypto.subtle.decrypt({ name: 'RSA-OAEP' }, key, cipherData)
     return new TextDecoder().decode(plainBuf)
-  } catch (e: any) { throw new CryptoError(`Decryption failed: private key mismatch or corrupted ciphertext`) }
+  } catch (e: any) {
+    throw new CryptoError(`Decryption failed: private key mismatch or corrupted ciphertext`)
+  }
 }
 
-export async function rsaSign(data: string, privateKeyPem: string, padding: string): Promise<string> {
+export async function rsaSign(
+  data: string,
+  privateKeyPem: string,
+  padding: string,
+): Promise<string> {
   const t = privateKeyPem.trim()
-  let der: ArrayBuffer; let format: 'pkcs8' | 'pkcs1'
-  if (t.includes(PEM_PRIVATE_HEADER)) { der = validatePem(t, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER); format = 'pkcs8' }
-  else if (t.includes(PEM_RSA_PRIVATE_HEADER)) { der = validatePem(t, PEM_RSA_PRIVATE_HEADER, PEM_RSA_PRIVATE_FOOTER); format = 'pkcs1' }
-  else { throw new CryptoError('Key format error: expected PRIVATE KEY PEM') }
+  let der: ArrayBuffer
+  let format: 'pkcs8' | 'pkcs1'
+  if (t.includes(PEM_PRIVATE_HEADER)) {
+    der = validatePem(t, PEM_PRIVATE_HEADER, PEM_PRIVATE_FOOTER)
+    format = 'pkcs8'
+  } else if (t.includes(PEM_RSA_PRIVATE_HEADER)) {
+    der = validatePem(t, PEM_RSA_PRIVATE_HEADER, PEM_RSA_PRIVATE_FOOTER)
+    format = 'pkcs1'
+  } else {
+    throw new CryptoError('Key format error: expected PRIVATE KEY PEM')
+  }
   const isPss = padding.startsWith('PSS')
-  const hashName = padding.includes('SHA-512') ? 'SHA-512' : padding.includes('SHA-256') ? 'SHA-256' : 'SHA-1'
-  const algorithm: any = isPss ? { name: 'RSA-PSS', hash: hashName, saltLength: 32 } : { name: 'RSASSA-PKCS1-v1_5', hash: hashName }
+  const hashName = padding.includes('SHA-512')
+    ? 'SHA-512'
+    : padding.includes('SHA-256')
+      ? 'SHA-256'
+      : 'SHA-1'
+  const algorithm: any = isPss
+    ? { name: 'RSA-PSS', hash: hashName, saltLength: 32 }
+    : { name: 'RSASSA-PKCS1-v1_5', hash: hashName }
   let key: CryptoKey
-  try { key = await crypto.subtle.importKey(format as any, der, algorithm, false, ['sign']) }
-  catch (e: any) { throw new CryptoError(`Key import failed: ${e.message}`) }
+  try {
+    key = await crypto.subtle.importKey(format as any, der, algorithm, false, ['sign'])
+  } catch (e: any) {
+    throw new CryptoError(`Key import failed: ${e.message}`)
+  }
   try {
     const sigBuf = await crypto.subtle.sign(algorithm, key, new TextEncoder().encode(data))
     return arrayBufferToBase64(sigBuf)
-  } catch (e: any) { throw new CryptoError(`Signing failed: invalid private key`) }
+  } catch (e: any) {
+    throw new CryptoError(`Signing failed: invalid private key`)
+  }
 }
 
-export async function rsaVerify(signatureB64: string, data: string, publicKeyPem: string, padding: string): Promise<boolean> {
+export async function rsaVerify(
+  signatureB64: string,
+  data: string,
+  publicKeyPem: string,
+  padding: string,
+): Promise<boolean> {
   const der = validatePem(publicKeyPem, PEM_PUBLIC_HEADER, PEM_PUBLIC_FOOTER)
   const isPss = padding.startsWith('PSS')
-  const hashName = padding.includes('SHA-512') ? 'SHA-512' : padding.includes('SHA-256') ? 'SHA-256' : 'SHA-1'
-  const algorithm: any = isPss ? { name: 'RSA-PSS', hash: hashName, saltLength: 32 } : { name: 'RSASSA-PKCS1-v1_5', hash: hashName }
+  const hashName = padding.includes('SHA-512')
+    ? 'SHA-512'
+    : padding.includes('SHA-256')
+      ? 'SHA-256'
+      : 'SHA-1'
+  const algorithm: any = isPss
+    ? { name: 'RSA-PSS', hash: hashName, saltLength: 32 }
+    : { name: 'RSASSA-PKCS1-v1_5', hash: hashName }
   let key: CryptoKey
-  try { key = await crypto.subtle.importKey('spki', der, algorithm, false, ['verify']) }
-  catch { throw new CryptoError('Key import failed: invalid public key') }
+  try {
+    key = await crypto.subtle.importKey('spki', der, algorithm, false, ['verify'])
+  } catch {
+    throw new CryptoError('Key import failed: invalid public key')
+  }
   try {
     const sigBytes = base64ToArrayBuffer(signatureB64)
     return await crypto.subtle.verify(algorithm, key, sigBytes, new TextEncoder().encode(data))
-  } catch (e: any) { throw new CryptoError(`Verification failed: ${e.message}`) }
+  } catch (e: any) {
+    throw new CryptoError(`Verification failed: ${e.message}`)
+  }
 }
 
 // ============================================================
 // HMAC
 // ============================================================
 
-export async function computeHmac(message: string, key: string, algorithm: string): Promise<string> {
+export async function computeHmac(
+  message: string,
+  key: string,
+  algorithm: string,
+): Promise<string> {
   const algoName: any = algorithm
   let keyBytes = parseKeyBytes(key.trim())
   // Web Crypto API does not support zero-length keys; use minimal non-empty key
   if (keyBytes.length === 0) keyBytes = new Uint8Array([0])
-  const cryptoKey = await crypto.subtle.importKey('raw', keyBytes, { name: 'HMAC', hash: algoName }, false, ['sign'])
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyBytes,
+    { name: 'HMAC', hash: algoName },
+    false,
+    ['sign'],
+  )
   const msgBytes = new TextEncoder().encode(message)
   const sig = await crypto.subtle.sign('HMAC', cryptoKey, msgBytes)
   return arrayBufferToHex(sig)

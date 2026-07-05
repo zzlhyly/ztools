@@ -70,10 +70,7 @@ describe('App Store', () => {
     const store = useAppStore()
     store.addRecentTool('/json')
     expect(store.recentTools).toEqual(['/json'])
-    expect(localStorageMock.setItem).toHaveBeenCalledWith(
-      'recentTools',
-      JSON.stringify(['/json'])
-    )
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('recentTools', JSON.stringify(['/json']))
   })
 
   it('should limit recent tools to 10', () => {

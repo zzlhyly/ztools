@@ -6,13 +6,7 @@ import { ref, watch } from 'vue'
 export type M3u8InputMode = 'webpage' | 'direct'
 
 export type M3u8TaskStatus =
-  | 'parsing'
-  | 'selecting_quality'
-  | 'downloading'
-  | 'converting'
-  | 'done'
-  | 'error'
-  | 'cancelled'
+  'parsing' | 'selecting_quality' | 'downloading' | 'converting' | 'done' | 'error' | 'cancelled'
 
 export interface M3u8QualityOption {
   bandwidth: number
@@ -79,7 +73,9 @@ function loadConfig(): M3u8Config {
     if (raw) {
       return { ...defaultConfig(), ...JSON.parse(raw) }
     }
-  } catch { /* ignore parse errors */ }
+  } catch {
+    /* ignore parse errors */
+  }
   return defaultConfig()
 }
 
@@ -89,7 +85,9 @@ function loadTasks(): M3u8Task[] {
     if (raw) {
       return JSON.parse(raw)
     }
-  } catch { /* ignore parse errors */ }
+  } catch {
+    /* ignore parse errors */
+  }
   return []
 }
 
@@ -105,14 +103,22 @@ export const useM3u8Store = defineStore('m3u8', () => {
   const tasks = ref<M3u8Task[]>(loadTasks())
 
   // Persist tasks on every change
-  watch(tasks, (val) => {
-    localStorage.setItem('m3u8_tasks', JSON.stringify(val))
-  }, { deep: true, flush: 'sync' })
+  watch(
+    tasks,
+    (val) => {
+      localStorage.setItem('m3u8_tasks', JSON.stringify(val))
+    },
+    { deep: true, flush: 'sync' },
+  )
 
   // Persist config on every change
-  watch(config, (val) => {
-    localStorage.setItem('m3u8_config', JSON.stringify(val))
-  }, { deep: true, flush: 'sync' })
+  watch(
+    config,
+    (val) => {
+      localStorage.setItem('m3u8_config', JSON.stringify(val))
+    },
+    { deep: true, flush: 'sync' },
+  )
 
   function updateConfig(partial: Partial<M3u8Config>) {
     config.value = { ...config.value, ...partial }
@@ -139,14 +145,14 @@ export const useM3u8Store = defineStore('m3u8', () => {
   }
 
   function updateTask(taskId: string, patch: Partial<M3u8Task>) {
-    const index = tasks.value.findIndex(t => t.id === taskId)
+    const index = tasks.value.findIndex((t) => t.id === taskId)
     if (index !== -1) {
       tasks.value[index] = { ...tasks.value[index], ...patch }
     }
   }
 
   function removeTask(taskId: string) {
-    tasks.value = tasks.value.filter(t => t.id !== taskId)
+    tasks.value = tasks.value.filter((t) => t.id !== taskId)
   }
 
   function cancelTask(taskId: string) {

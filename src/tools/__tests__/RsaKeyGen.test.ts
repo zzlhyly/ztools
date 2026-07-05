@@ -46,7 +46,7 @@ describe('RsaKeyGen', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons.filter(b => b.text().toLowerCase().includes('generate')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().toLowerCase().includes('generate')).length).toBe(1)
   })
 
   it('should render two key output panels', async () => {

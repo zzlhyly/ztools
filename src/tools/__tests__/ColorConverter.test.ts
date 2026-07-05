@@ -37,7 +37,7 @@ describe('ColorConverter', () => {
     await input.setValue('#ff0000')
 
     const buttons = wrapper.findAll('button')
-    const convertButton = buttons.find(b => b.text().includes('Convert'))!
+    const convertButton = buttons.find((b) => b.text().includes('Convert'))!
     await convertButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -54,17 +54,17 @@ describe('ColorConverter', () => {
     await hexInput.setValue('')
 
     const inputs = wrapper.findAll('input')
-    const rInput = inputs.find(i => i.attributes('placeholder') === 'R')!
+    const rInput = inputs.find((i) => i.attributes('placeholder') === 'R')!
     await rInput.setValue('255')
 
-    const gInput = inputs.find(i => i.attributes('placeholder') === 'G')!
+    const gInput = inputs.find((i) => i.attributes('placeholder') === 'G')!
     await gInput.setValue('0')
 
-    const bInput = inputs.find(i => i.attributes('placeholder') === 'B')!
+    const bInput = inputs.find((i) => i.attributes('placeholder') === 'B')!
     await bInput.setValue('0')
 
     const buttons = wrapper.findAll('button')
-    const convertButton = buttons.find(b => b.text().includes('Convert'))!
+    const convertButton = buttons.find((b) => b.text().includes('Convert'))!
     await convertButton.trigger('click')
 
     const output = wrapper.find('.code-content')
@@ -80,7 +80,7 @@ describe('ColorConverter', () => {
     await input.setValue('#00ff00')
 
     const buttons = wrapper.findAll('button')
-    const convertButton = buttons.find(b => b.text().includes('Convert'))!
+    const convertButton = buttons.find((b) => b.text().includes('Convert'))!
     await convertButton.trigger('click')
 
     const preview = wrapper.find('.color-preview')
@@ -95,7 +95,7 @@ describe('ColorConverter', () => {
     await input.setValue('#ff0000')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect((input.element as HTMLInputElement).value).toBe('')

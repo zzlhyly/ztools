@@ -14,9 +14,7 @@ export function parseCurlCommand(
   if (!trimmed.startsWith('curl ')) return null
 
   // Extract URL — matches the first unquoted, single-quoted, or double-quoted URL after "curl "
-  const urlMatch = trimmed.match(
-    /curl\s+(?:--\S+\s+)*(?:'([^']+)'|"([^"]+)"|(\S+))/,
-  )
+  const urlMatch = trimmed.match(/curl\s+(?:--\S+\s+)*(?:'([^']+)'|"([^"]+)"|(\S+))/)
   if (!urlMatch) return null
   const url = urlMatch[1] || urlMatch[2] || urlMatch[3]
   if (!url || !url.startsWith('http')) return null
@@ -62,10 +60,7 @@ export interface M3u8Info {
   qualities: M3u8QualityOption[]
 }
 
-export async function invokeParseM3u8Urls(
-  html: string,
-  baseUrl: string,
-): Promise<M3u8Info[]> {
+export async function invokeParseM3u8Urls(html: string, baseUrl: string): Promise<M3u8Info[]> {
   try {
     return await invoke<M3u8Info[]>('parse_m3u8_urls', { html, baseUrl })
   } catch (e) {

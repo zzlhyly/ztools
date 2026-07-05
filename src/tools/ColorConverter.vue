@@ -55,7 +55,17 @@ const handleConvert = () => {
       const r = parseInt(rInput.value)
       const g = parseInt(gInput.value)
       const b = parseInt(bInput.value)
-      if (isNaN(r) || isNaN(g) || isNaN(b) || r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+      if (
+        isNaN(r) ||
+        isNaN(g) ||
+        isNaN(b) ||
+        r < 0 ||
+        r > 255 ||
+        g < 0 ||
+        g > 255 ||
+        b < 0 ||
+        b > 255
+      ) {
         throw new Error('Invalid RGB')
       }
       const hex = rgbToHex(r, g, b)

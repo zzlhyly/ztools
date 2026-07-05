@@ -121,7 +121,12 @@ async function handleVerify() {
   }
   try {
     isProcessing.value = true
-    const valid = await rsaVerify(signatureForVerify.value, input.value, publicKey.value, signPadding.value)
+    const valid = await rsaVerify(
+      signatureForVerify.value,
+      input.value,
+      publicKey.value,
+      signPadding.value,
+    )
     output.value = valid ? '\u2713 Signature valid' : '\u2717 Signature invalid'
     ElMessage.success(valid ? 'Signature is valid' : 'Signature is invalid')
   } catch (e) {

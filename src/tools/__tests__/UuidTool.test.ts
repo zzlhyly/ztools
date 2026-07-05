@@ -19,8 +19,9 @@ const i18n = createI18n({
 
 vi.mock('@/utils/crypto', () => ({
   generateUuids: vi.fn((count: number) =>
-    Array.from({ length: count }, (_, i) =>
-      `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, '0')}`,
+    Array.from(
+      { length: count },
+      (_, i) => `550e8400-e29b-41d4-a716-4466554400${String(i).padStart(2, '0')}`,
     ),
   ),
 }))
@@ -42,7 +43,7 @@ describe('UuidTool', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons.filter(b => b.text().includes('Generate')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Generate')).length).toBe(1)
   })
 
   it('should render copy all button', () => {
@@ -50,7 +51,7 @@ describe('UuidTool', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons.filter(b => b.text().includes('Copy')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Copy')).length).toBe(1)
   })
 
   it('should render clear button', () => {
@@ -58,7 +59,7 @@ describe('UuidTool', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons.filter(b => b.text().includes('Clear')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Clear')).length).toBe(1)
   })
 
   it('should generate UUIDs on Generate click', async () => {
@@ -66,7 +67,7 @@ describe('UuidTool', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    const genButton = buttons.find(b => b.text().includes('Generate'))!
+    const genButton = buttons.find((b) => b.text().includes('Generate'))!
     await genButton.trigger('click')
 
     const output = wrapper.find('.code-content')

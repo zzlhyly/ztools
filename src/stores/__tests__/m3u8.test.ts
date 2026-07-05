@@ -7,9 +7,15 @@ const localStorageMock = (() => {
   let store: Record<string, string> = {}
   return {
     getItem: vi.fn((key: string) => store[key] || null),
-    setItem: vi.fn((key: string, value: string) => { store[key] = value }),
-    removeItem: vi.fn((key: string) => { delete store[key] }),
-    clear: vi.fn(() => { store = {} }),
+    setItem: vi.fn((key: string, value: string) => {
+      store[key] = value
+    }),
+    removeItem: vi.fn((key: string) => {
+      delete store[key]
+    }),
+    clear: vi.fn(() => {
+      store = {}
+    }),
   }
 })()
 
@@ -43,7 +49,7 @@ describe('M3U8 Store', () => {
 
     it('should load config from localStorage on init', () => {
       localStorageMock.getItem.mockReturnValueOnce(
-        JSON.stringify({ downloadDir: '/custom', ffmpegPath: '/usr/bin/ffmpeg' })
+        JSON.stringify({ downloadDir: '/custom', ffmpegPath: '/usr/bin/ffmpeg' }),
       )
       const store = useM3u8Store()
       expect(store.config.downloadDir).toBe('/custom')
@@ -71,7 +77,7 @@ describe('M3U8 Store', () => {
         downloaded: 100,
         total: 200,
       })
-      const updated = store.tasks.find(t => t.id === task.id)!
+      const updated = store.tasks.find((t) => t.id === task.id)!
       expect(updated.status).toBe('downloading')
       expect(updated.progress).toBe(50)
       expect(updated.speed).toBe('2.0 MB/s')
@@ -92,7 +98,7 @@ describe('M3U8 Store', () => {
       const task = store.addTask('https://example.com/video', 'direct')
       store.updateTask(task.id, { status: 'downloading' })
       store.cancelTask(task.id)
-      const cancelled = store.tasks.find(t => t.id === task.id)!
+      const cancelled = store.tasks.find((t) => t.id === task.id)!
       expect(cancelled.status).toBe('cancelled')
     })
 
@@ -104,7 +110,7 @@ describe('M3U8 Store', () => {
         progress: 100,
         completedAt: Date.now(),
       })
-      const done = store.tasks.find(t => t.id === task.id)!
+      const done = store.tasks.find((t) => t.id === task.id)!
       expect(done.status).toBe('done')
       expect(done.completedAt).toBeGreaterThan(0)
     })
@@ -112,10 +118,7 @@ describe('M3U8 Store', () => {
     it('should persist tasks to localStorage', () => {
       const store = useM3u8Store()
       store.addTask('https://example.com/video', 'direct')
-      expect(localStorageMock.setItem).toHaveBeenCalledWith(
-        'm3u8_tasks',
-        expect.any(String)
-      )
+      expect(localStorageMock.setItem).toHaveBeenCalledWith('m3u8_tasks', expect.any(String))
     })
 
     it('should persist task history (keep completed tasks)', () => {
@@ -132,7 +135,7 @@ describe('M3U8 Store', () => {
       const task = store.addTask('https://example.com/video', 'direct')
       store.updateTask(task.id, { status: 'downloading' })
       const active = store.tasks.filter(
-        t => t.status === 'downloading' || t.status === 'converting'
+        (t) => t.status === 'downloading' || t.status === 'converting',
       )
       expect(active).toHaveLength(1)
     })

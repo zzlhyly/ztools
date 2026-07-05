@@ -72,7 +72,14 @@ async function handleEncrypt() {
   }
   try {
     isProcessing.value = true
-    const result = await aesEncrypt(input.value, keyHex.value, ivHex.value, mode.value, keySize.value, padding.value)
+    const result = await aesEncrypt(
+      input.value,
+      keyHex.value,
+      ivHex.value,
+      mode.value,
+      keySize.value,
+      padding.value,
+    )
     output.value = convertOutputForDisplay(result)
     lastSucceeded.value = true
     lastOperation.value = 'encrypt'
@@ -95,7 +102,14 @@ async function handleDecrypt() {
   try {
     isProcessing.value = true
     const normalized = convertInputForDecrypt(input.value)
-    const result = await aesDecrypt(normalized, keyHex.value, ivHex.value, mode.value, keySize.value, padding.value)
+    const result = await aesDecrypt(
+      normalized,
+      keyHex.value,
+      ivHex.value,
+      mode.value,
+      keySize.value,
+      padding.value,
+    )
     output.value = result
     lastSucceeded.value = true
     lastOperation.value = 'decrypt'
@@ -129,7 +143,8 @@ const handleClear = () => {
 }
 
 watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
-  if (!lastSucceeded.value || !input.value.trim() || !keyHex.value.trim() || !ivHex.value.trim()) return
+  if (!lastSucceeded.value || !input.value.trim() || !keyHex.value.trim() || !ivHex.value.trim())
+    return
   if (lastOperation.value === 'encrypt') handleEncrypt()
   else if (lastOperation.value === 'decrypt') handleDecrypt()
 })

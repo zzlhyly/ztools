@@ -55,8 +55,8 @@ describe('HashCalculator', () => {
       global: { plugins: [router, i18n] },
     })
     const buttons = wrapper.findAll('button')
-    expect(buttons.filter(b => b.text().includes('Calculate')).length).toBe(1)
-    expect(buttons.filter(b => b.text().includes('Clear')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Calculate')).length).toBe(1)
+    expect(buttons.filter((b) => b.text().includes('Clear')).length).toBe(1)
   })
 
   it('should clear input and output', async () => {
@@ -67,7 +67,7 @@ describe('HashCalculator', () => {
     await textarea.setValue('test')
 
     const buttons = wrapper.findAll('button')
-    const clearButton = buttons.find(b => b.text().includes('Clear'))!
+    const clearButton = buttons.find((b) => b.text().includes('Clear'))!
     await clearButton.trigger('click')
 
     expect(textarea.element.value).toBe('')
