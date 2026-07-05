@@ -62,3 +62,54 @@ pub fn convert_to_mp4(
     info!("Conversion complete: {:?}", output_path);
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn test_concat_file_generation() {
+        let tmp = std::env::temp_dir().join("ztools_conv_test");
+        fs::create_dir_all(&tmp).unwrap();
+
+        // Create dummy TS files
+        fs::write(tmp.join("00001.ts"), b"dummy").unwrap();
+        fs::write(tmp.join("00002.ts"), b"dummy").unwrap();
+        fs::write(tmp.join("note.txt"), b"not a ts file").unwrap();
+
+        let output = tmp.join("output.mp4");
+
+        // Use a non-existent ffmpeg — this will fail but the concat file
+        // should have been generated correctly before ffmpeg runs.
+        let _result = convert_to_mp4(&tmp, &output, "nonexistent_ffmpeg");
+
+        // Verify concat file was created with correct entries
+        let concat = tmp.join("concat.txt");
+        let content = fs::read_to_string(&concat).unwrap_or_default();
+        assert!(content.contains("file '"));
+        assert!(content.contains("00001.ts"));
+        assert!(content.contains("00002.ts"));
+        assert!(!content.contains("note.txt"));
+
+        // Should fail because ffmpeg doesn't exist
+        assert!(_result.is_err());
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+
+    #[test]
+    fn test_empty_temp_dir() {
+        let tmp = std::env::temp_dir().join("ztools_conv_empty");
+        fs::create_dir_all(&tmp).unwrap();
+        let output = tmp.join("output.mp4");
+
+        let result = convert_to_mp4(&tmp, &output, "nonexistent_ffmpeg");
+        let concat = tmp.join("concat.txt");
+        let content = fs::read_to_string(&concat).unwrap_or_default();
+        // Empty dir — no TS files, so concat should be empty
+        assert_eq!(content, "");
+
+        fs::remove_dir_all(&tmp).ok();
+    }
+}

@@ -27,7 +27,7 @@
 - [x] 4.1 Add `#[cfg(test)] mod tests` to `m3u8/playlist.rs` with inline M3U8 fixture strings (master playlist, media playlist, encrypted playlist)
 - [x] 4.2 Test `playlist::parse_m3u8` for: segment parsing, EXT-X-KEY extraction, quality detection, live stream rejection
 - [x] 4.3 Add tests to `m3u8/decrypt.rs` using known AES-128-CBC test vectors (key + IV + ciphertext → plaintext)
-- [ ] 4.4 Add tests to `m3u8/converter.rs` for output filename generation (skip FFmpeg-dependent tests if FFmpeg not installed)
+- [x] 4.4 Add tests to `m3u8/converter.rs` for output filename generation (skip FFmpeg-dependent tests if FFmpeg not installed)
 
 ## 5. ESLint Configuration
 
@@ -72,6 +72,6 @@
 - [x] 10.3 Run `npm run test:run` — 30 files, 253 tests pass (includes new errors.test.ts)
 - [ ] 10.4 Run `npm run test:coverage` — meets 80% thresholds (blocked: coverage needs measurement)
 - [x] 10.5 Run `cargo clippy -- -D warnings` — compiles (1 unused-import warning)
-- [ ] 10.6 Run `cargo fmt --check` — zero violations
-- [ ] 10.7 Run `cargo test --lib` — all Rust tests pass
+- [x] 10.6 Run `cargo fmt --check` — zero violations
+- [x] 10.7 Run `cargo test --lib` — 28 tests pass
 - [ ] 10.8 Run `npm run tauri build` — successful production build

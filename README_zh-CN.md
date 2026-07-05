@@ -29,8 +29,8 @@
 - **状态管理**：Pinia
 - **国际化**：vue-i18n（中文/English）
 - **测试**：Vitest + Rust 单元测试
-- **代码检查/格式化**：vue-tsc（类型检查）+ Prettier（格式化）
-- **CI**：GitHub Actions（格式检查 → 类型检查 → 测试 → 构建 + Rust 编译检查/测试）
+- **代码检查**：ESLint（Vue + TypeScript）+ Prettier（格式化）+ cargo clippy + cargo fmt
+- **CI**：GitHub Actions（ESLint → 类型检查 → 测试 → 构建，clippy → fmt → 编译检查 → 测试）
 
 ## 环境要求
 
@@ -70,7 +70,24 @@ npm run format
 
 # 检查格式
 npm run format:check
+
+# 代码检查
+npm run lint
+
+# 代码检查并自动修复
+npm run lint:fix
 ```
+
+## Rust 日志
+
+设置 `RUST_LOG` 环境变量控制日志级别：
+
+```bash
+RUST_LOG=debug npm run tauri dev     # 详细日志
+RUST_LOG=info,ztools_lib::m3u8=debug npm run tauri dev  # 仅 m3u8 模块详细日志
+```
+
+默认级别为 `warn`（仅输出错误和警告）。
 
 ## 构建
 
@@ -118,6 +135,9 @@ ztools/
 ├── src-tauri/               # Tauri 后端（Rust）
 │   └── src/m3u8/            # M3U8 模块（解析、解密、下载、转码）
 ├── .prettierrc.json         # 代码格式化规则
+├── eslint.config.mjs        # ESLint 配置
+├── lefthook.yml             # Git 预提交钩子
+├── .editorconfig            # 编辑器设置
 ├── .git-blame-ignore-revs   # git blame 忽略格式化提交
 └── package.json
 ```
@@ -142,8 +162,8 @@ cargo test --lib --manifest-path src-tauri/Cargo.toml
 
 每次推送到 `main` 或提交 PR 时自动运行：
 
-- **前端**：格式检查 → 类型检查 (`vue-tsc`) → 测试 (`vitest`) → 构建 (`vite`)
-- **后端**：编译检查 (`cargo check`) → 测试 (`cargo test --lib`)
+- **前端**：格式检查 → ESLint → 类型检查 (`vue-tsc`) → 测试 (`vitest`) → 构建 (`vite`)
+- **后端**：格式检查 (`cargo fmt`) → 代码检查 (`cargo clippy`) → 编译检查 (`cargo check`) → 测试 (`cargo test --lib`)
 
 ## 国际化
 

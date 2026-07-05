@@ -29,8 +29,8 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - **State Management**: Pinia
 - **Internationalization**: vue-i18n (中文/English)
 - **Testing**: Vitest + Rust unit tests
-- **Linting/Formatting**: vue-tsc (type checking) + Prettier (formatting)
-- **CI**: GitHub Actions (format-check, type-check, tests, build + Rust check/test)
+- **Linting**: ESLint (Vue + TypeScript) + Prettier (formatting) + cargo clippy + cargo fmt
+- **CI**: GitHub Actions (ESLint → type-check → tests → build, clippy → fmt → check → test)
 
 ## Prerequisites
 
@@ -70,7 +70,24 @@ npm run format
 
 # Check formatting
 npm run format:check
+
+# Lint code
+npm run lint
+
+# Lint and auto-fix
+npm run lint:fix
 ```
+
+## Rust Logging
+
+Set `RUST_LOG` env var to control log level:
+
+```bash
+RUST_LOG=debug npm run tauri dev     # verbose logs
+RUST_LOG=info,ztools_lib::m3u8=debug npm run tauri dev  # debug for m3u8 only
+```
+
+Default level is `warn`.
 
 ## Building
 
@@ -89,7 +106,8 @@ ztools/
 │   ├── components/          # Shared components
 │   │   ├── TitleBar.vue     # Custom title bar
 │   │   ├── Sidebar.vue      # Navigation sidebar
-│   │   └── ToolLayout.vue   # Tool page layout
+│   │   ├── ToolLayout.vue   # Tool page layout
+│   │   └── ErrorFallback.vue # Error boundary component
 │   ├── composables/         # Shared composables
 │   │   └── useClipboard.ts  # Clipboard copy with notification
 │   ├── tools/               # Tool pages
@@ -114,10 +132,13 @@ ztools/
 │   ├── styles/              # CSS variables & global styles
 │   └── test-setup.ts        # Global test mocks
 ├── .github/workflows/       # CI pipeline
-│   └── ci.yml               # format-check → vue-tsc → vitest → build + cargo check/test
+│   └── ci.yml               # format → ESLint → type-check → test → build + fmt → clippy → check → test
 ├── src-tauri/               # Tauri backend (Rust)
 │   └── src/m3u8/            # M3U8 module (playlist, decrypt, downloader, converter)
 ├── .prettierrc.json         # Code formatting rules
+├── eslint.config.mjs        # ESLint configuration
+├── lefthook.yml             # Git pre-commit hooks
+├── .editorconfig            # Editor settings
 ├── .git-blame-ignore-revs   # Ignore formatting commits in git blame
 └── package.json
 ```
@@ -142,8 +163,8 @@ cargo test --lib --manifest-path src-tauri/Cargo.toml
 
 Every push and pull request to `main` runs:
 
-- **Frontend**: format-check → type-check (`vue-tsc`) → tests (`vitest`) → build (`vite`)
-- **Backend**: compile check (`cargo check`) → tests (`cargo test --lib`)
+- **Frontend**: format-check → ESLint → type-check (`vue-tsc`) → tests (`vitest`) → build (`vite`)
+- **Backend**: format-check (`cargo fmt`) → lint (`cargo clippy`) → compile check (`cargo check`) → tests (`cargo test --lib`)
 
 ## Internationalization
 
