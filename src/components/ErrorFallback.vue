@@ -3,7 +3,7 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { AlertTriangle, RotateCcw, Home } from 'lucide-vue-next'
 
-const props = defineProps<{
+defineProps<{
   message?: string
 }>()
 
@@ -27,7 +27,9 @@ function handleGoHome() {
   <div class="error-fallback">
     <div class="error-fallback__card">
       <AlertTriangle class="error-fallback__icon" :size="48" />
-      <h2 class="error-fallback__title">{{ t('error.title') }}</h2>
+      <h2 class="error-fallback__title">
+        {{ t('error.title') }}
+      </h2>
       <p class="error-fallback__message">
         {{ message || t('error.defaultMessage') }}
       </p>
