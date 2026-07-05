@@ -382,7 +382,9 @@ onUnmounted(() => {
 
 <template>
   <div class="m3u8-downloader">
-    <h2 class="tool-title">{{ t('tools.m3u8.name') }}</h2>
+    <h2 class="tool-title">
+      {{ t('tools.m3u8.name') }}
+    </h2>
 
     <div class="input-section">
       <div class="input-row">
@@ -393,43 +395,76 @@ onUnmounted(() => {
           class="url-input"
           @keydown.enter="handleAddTask"
         />
-        <el-button type="primary" :icon="Download" @click="handleAddTask">
+        <el-button
+          type="primary"
+          :icon="Download"
+          @click="handleAddTask"
+        >
           {{ t('common.addTask') }}
         </el-button>
       </div>
 
       <div class="input-actions">
-        <el-tooltip content="从浏览器 DevTools 复制 cURL 命令并粘贴，自动提取 URL 和 Headers" placement="bottom">
-          <el-button text size="small" @click="showCurlInput = !showCurlInput">
+        <el-tooltip
+          content="从浏览器 DevTools 复制 cURL 命令并粘贴，自动提取 URL 和 Headers"
+          placement="bottom"
+        >
+          <el-button
+            text
+            size="small"
+            @click="showCurlInput = !showCurlInput"
+          >
             {{ t('common.curlPaste') }}
           </el-button>
         </el-tooltip>
-        <el-tooltip content="配置请求头（Referer、Cookie 等）" placement="bottom">
-          <el-button text size="small" @click="showHeadersConfig = !showHeadersConfig">
+        <el-tooltip
+          content="配置请求头（Referer、Cookie 等）"
+          placement="bottom"
+        >
+          <el-button
+            text
+            size="small"
+            @click="showHeadersConfig = !showHeadersConfig"
+          >
             {{ t('common.headers') }}
           </el-button>
         </el-tooltip>
       </div>
 
-      <div v-if="showCurlInput" class="curl-section">
+      <div
+        v-if="showCurlInput"
+        class="curl-section"
+      >
         <el-input
           v-model="curlInput"
           type="textarea"
           :rows="3"
           placeholder="curl 'https://...' -H 'Referer: ...' -H 'Cookie: ...'"
         />
-        <el-button size="small" :icon="Upload" @click="handleCurlPaste" style="margin-top: 8px">
+        <el-button
+          size="small"
+          :icon="Upload"
+          style="margin-top: 8px"
+          @click="handleCurlPaste"
+        >
           {{ t('common.curlPaste') }}
         </el-button>
       </div>
 
-      <div v-if="showHeadersConfig" class="headers-config">
+      <div
+        v-if="showHeadersConfig"
+        class="headers-config"
+      >
         <table class="headers-table">
           <thead>
             <tr>
-              <th class="col-key">Key</th>
-              <th class="col-value">Value</th>
-              <th class="col-action"></th>
+              <th class="col-key">
+                Key
+              </th>
+              <th class="col-value">
+                Value
+              </th>
+              <th class="col-action" />
             </tr>
           </thead>
           <tbody>
@@ -443,7 +478,7 @@ onUnmounted(() => {
                   @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, referer: v } })"
                 />
               </td>
-              <td></td>
+              <td />
             </tr>
             <tr>
               <td><span class="header-key-label">Cookie</span></td>
@@ -455,26 +490,44 @@ onUnmounted(() => {
                   @update:model-value="(v: string) => store.updateConfig({ headers: { ...store.config.headers, cookie: v } })"
                 />
               </td>
-              <td></td>
+              <td />
             </tr>
-            <tr v-for="(item, index) in store.config.headers.custom" :key="index">
+            <tr
+              v-for="(item, index) in store.config.headers.custom"
+              :key="index"
+            >
               <td>
-                <el-input :model-value="item.key" placeholder="Header Name" size="small"
-                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: v, value: c[index]?.value || '' }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }" />
+                <el-input
+                  :model-value="item.key"
+                  placeholder="Header Name"
+                  size="small"
+                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: v, value: c[index]?.value || '' }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }"
+                />
               </td>
               <td>
-                <el-input :model-value="item.value" placeholder="Header Value" size="small"
-                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: c[index]?.key || '', value: v }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }" />
+                <el-input
+                  :model-value="item.value"
+                  placeholder="Header Value"
+                  size="small"
+                  @update:model-value="(v: string) => { const c = [...store.config.headers.custom]; c[index] = { key: c[index]?.key || '', value: v }; store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }"
+                />
               </td>
               <td>
-                <el-button :icon="X" size="small" circle
-                  @click="() => { const c = store.config.headers.custom.filter((_: any, i: number) => i !== index); store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }" />
+                <el-button
+                  :icon="X"
+                  size="small"
+                  circle
+                  @click="() => { const c = store.config.headers.custom.filter((_: any, i: number) => i !== index); store.updateConfig({ headers: { ...store.config.headers, custom: c } }) }"
+                />
               </td>
             </tr>
           </tbody>
         </table>
-        <el-button size="small" style="margin-top: 8px"
-          @click="() => store.updateConfig({ headers: { ...store.config.headers, custom: [...store.config.headers.custom, { key: '', value: '' }] } })">
+        <el-button
+          size="small"
+          style="margin-top: 8px"
+          @click="() => store.updateConfig({ headers: { ...store.config.headers, custom: [...store.config.headers.custom, { key: '', value: '' }] } })"
+        >
           + 添加 Header
         </el-button>
       </div>
@@ -489,8 +542,15 @@ onUnmounted(() => {
               placeholder="选择下载目录"
               @update:model-value="(v: string) => store.updateConfig({ downloadDir: v })"
             />
-            <el-tooltip content="选择文件夹" placement="top">
-              <el-button :icon="FolderOpen" size="small" @click="handleSelectDownloadDir" />
+            <el-tooltip
+              content="选择文件夹"
+              placement="top"
+            >
+              <el-button
+                :icon="FolderOpen"
+                size="small"
+                @click="handleSelectDownloadDir"
+              />
             </el-tooltip>
           </div>
         </div>
@@ -503,15 +563,26 @@ onUnmounted(() => {
               placeholder="ffmpeg 路径"
               @update:model-value="(v: string) => store.updateConfig({ ffmpegPath: v })"
             />
-            <el-tooltip content="选择 FFmpeg 可执行文件" placement="top">
-              <el-button :icon="FileSearch" size="small" @click="handleSelectFfmpegPath" />
+            <el-tooltip
+              content="选择 FFmpeg 可执行文件"
+              placement="top"
+            >
+              <el-button
+                :icon="FileSearch"
+                size="small"
+                @click="handleSelectFfmpegPath"
+              />
             </el-tooltip>
           </div>
         </div>
       </div>
     </div>
 
-    <el-dialog v-model="showQualitySelect" :title="t('common.selectQuality')" width="400px">
+    <el-dialog
+      v-model="showQualitySelect"
+      :title="t('common.selectQuality')"
+      width="400px"
+    >
       <div class="quality-list">
         <div
           v-for="q in store.tasks.find(t => t.status === 'selecting_quality')?.qualityOptions || []"
@@ -526,11 +597,23 @@ onUnmounted(() => {
     </el-dialog>
 
     <div class="task-list">
-      <div v-if="activeTasks.length > 0" class="task-section">
-        <div class="section-title">{{ t('common.activeDownloads') }}</div>
-        <div v-for="task in activeTasks" :key="task.id" class="task-item">
+      <div
+        v-if="activeTasks.length > 0"
+        class="task-section"
+      >
+        <div class="section-title">
+          {{ t('common.activeDownloads') }}
+        </div>
+        <div
+          v-for="task in activeTasks"
+          :key="task.id"
+          class="task-item"
+        >
           <div class="task-info">
-            <span class="task-title" :title="task.url">{{ task.filename || task.url }}</span>
+            <span
+              class="task-title"
+              :title="task.url"
+            >{{ task.filename || task.url }}</span>
             <span class="task-status">{{ t(`common.${task.status}`) }}</span>
           </div>
           <DownloadProgress
@@ -541,17 +624,37 @@ onUnmounted(() => {
             :status="task.status"
           />
           <div class="task-actions">
-            <el-button :icon="X" size="small" circle @click="handleCancelTask(task.id)" />
+            <el-button
+              :icon="X"
+              size="small"
+              circle
+              @click="handleCancelTask(task.id)"
+            />
           </div>
         </div>
       </div>
 
-      <div v-if="completedTasks.length > 0" class="task-section">
-        <div class="section-title">{{ t('common.history') }}</div>
-        <div v-for="task in completedTasks" :key="task.id" class="task-item">
+      <div
+        v-if="completedTasks.length > 0"
+        class="task-section"
+      >
+        <div class="section-title">
+          {{ t('common.history') }}
+        </div>
+        <div
+          v-for="task in completedTasks"
+          :key="task.id"
+          class="task-item"
+        >
           <div class="task-info">
-            <span class="task-title" :title="task.url">{{ task.filename || task.url }}</span>
-            <span class="task-status" :class="{ error: task.status === 'error' }">
+            <span
+              class="task-title"
+              :title="task.url"
+            >{{ task.filename || task.url }}</span>
+            <span
+              class="task-status"
+              :class="{ error: task.status === 'error' }"
+            >
               {{ task.error || t(`common.${task.status}`) }}
             </span>
           </div>
@@ -570,12 +673,20 @@ onUnmounted(() => {
               circle
               @click="handleRetryTask(task.id)"
             />
-            <el-button :icon="Trash2" size="small" circle @click="handleRemoveTask(task.id)" />
+            <el-button
+              :icon="Trash2"
+              size="small"
+              circle
+              @click="handleRemoveTask(task.id)"
+            />
           </div>
         </div>
       </div>
 
-      <div v-if="store.tasks.length === 0" class="empty-state">
+      <div
+        v-if="store.tasks.length === 0"
+        class="empty-state"
+      >
         <Download :size="48" />
         <p>{{ t('tools.m3u8.description') }}</p>
       </div>

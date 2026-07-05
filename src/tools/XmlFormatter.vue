@@ -40,22 +40,42 @@ const handleClear = () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.xml.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.xml.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input>
-      <ToolTextarea v-model="input" :placeholder="t('common.placeholder')" submit-hotkey @submit="handleFormat" />
+      <ToolTextarea
+        v-model="input"
+        :placeholder="t('common.placeholder')"
+        submit-hotkey
+        @submit="handleFormat"
+      />
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Code" @click="handleFormat">
+      <el-button
+        type="primary"
+        :icon="Code"
+        @click="handleFormat"
+      >
         {{ t('common.format') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" :error="error" language="xml" />
+      <CodeOutput
+        :content="output"
+        :error="error"
+        language="xml"
+      />
     </template>
   </ToolLayout>
 </template>

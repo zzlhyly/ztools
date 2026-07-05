@@ -147,4 +147,10 @@ export default {
     PARSE_ERROR: 'Failed to parse data',
     DOWNLOAD_ERROR: 'Download failed',
   },
+  error: {
+    title: 'Something went wrong',
+    defaultMessage: 'An unexpected error occurred. Please try again.',
+    retry: 'Retry',
+    goHome: 'Go Home',
+  },
 }

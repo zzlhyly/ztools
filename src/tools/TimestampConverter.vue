@@ -48,7 +48,11 @@ const handleClear = () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.timestamp.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.timestamp.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input>
       <div class="timestamp-form">
         <div class="form-group">
@@ -58,7 +62,7 @@ const handleClear = () => {
             type="text"
             class="timestamp-input"
             placeholder="Enter timestamp..."
-          />
+          >
         </div>
         <div class="form-group">
           <label>Date</label>
@@ -66,29 +70,43 @@ const handleClear = () => {
             v-model="dateInput"
             type="datetime-local"
             class="date-input"
-          />
+          >
         </div>
         <div class="form-group">
           <label>Unit</label>
           <el-radio-group v-model="unit">
-            <el-radio value="s">Seconds</el-radio>
-            <el-radio value="ms">Milliseconds</el-radio>
+            <el-radio value="s">
+              Seconds
+            </el-radio>
+            <el-radio value="ms">
+              Milliseconds
+            </el-radio>
           </el-radio-group>
         </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Clock" @click="handleConvert">
+      <el-button
+        type="primary"
+        :icon="Clock"
+        @click="handleConvert"
+      >
         {{ t('common.convert') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" language="text" />
+      <CodeOutput
+        :content="output"
+        language="text"
+      />
     </template>
   </ToolLayout>
 </template>

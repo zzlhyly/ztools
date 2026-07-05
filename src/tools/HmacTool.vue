@@ -66,9 +66,17 @@ watch(algorithm, () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.hmac.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.hmac.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input-actions>
-      <el-select v-model="algorithm" size="small" style="width: 140px">
+      <el-select
+        v-model="algorithm"
+        size="small"
+        style="width: 140px"
+      >
         <el-option
           v-for="alg in ALGORITHMS"
           :key="alg.value"
@@ -95,23 +103,40 @@ watch(algorithm, () => {
               size="small"
               class="key-input"
             />
-            <el-tag v-if="keyFormat" size="small" type="info">{{ keyFormat }}</el-tag>
+            <el-tag
+              v-if="keyFormat"
+              size="small"
+              type="info"
+            >
+              {{ keyFormat }}
+            </el-tag>
           </div>
         </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Fingerprint" :loading="isComputing" @click="handleCalculate">
+      <el-button
+        type="primary"
+        :icon="Fingerprint"
+        :loading="isComputing"
+        @click="handleCalculate"
+      >
         {{ t('common.calculate') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" language="text" />
+      <CodeOutput
+        :content="output"
+        language="text"
+      />
     </template>
   </ToolLayout>
 </template>

@@ -79,39 +79,71 @@ const handleClear = () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.color.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.color.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input>
       <div class="color-form">
         <div class="form-group">
           <label>HEX</label>
-          <el-input v-model="hexInput" placeholder="#ff0000" />
+          <el-input
+            v-model="hexInput"
+            placeholder="#ff0000"
+          />
         </div>
         <div class="form-group">
           <label>RGB</label>
           <div class="rgb-inputs">
-            <el-input v-model="rInput" placeholder="R" />
-            <el-input v-model="gInput" placeholder="G" />
-            <el-input v-model="bInput" placeholder="B" />
+            <el-input
+              v-model="rInput"
+              placeholder="R"
+            />
+            <el-input
+              v-model="gInput"
+              placeholder="G"
+            />
+            <el-input
+              v-model="bInput"
+              placeholder="B"
+            />
           </div>
         </div>
-        <div v-if="previewColor" class="form-group">
+        <div
+          v-if="previewColor"
+          class="form-group"
+        >
           <label>Preview</label>
-          <div class="color-preview" :style="{ backgroundColor: previewColor }" />
+          <div
+            class="color-preview"
+            :style="{ backgroundColor: previewColor }"
+          />
         </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Palette" @click="handleConvert">
+      <el-button
+        type="primary"
+        :icon="Palette"
+        @click="handleConvert"
+      >
         {{ t('common.convert') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" language="text" />
+      <CodeOutput
+        :content="output"
+        language="text"
+      />
     </template>
   </ToolLayout>
 </template>

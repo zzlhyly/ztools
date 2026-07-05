@@ -1,5 +1,6 @@
 use std::path::Path;
 use std::process::Command;
+use tracing::{debug, error, info};
 
 /// Convert TS segments in `temp_dir` to an MP4 file at `output_path` using ffmpeg.
 /// Returns Ok(()) on success.
@@ -8,6 +9,10 @@ pub fn convert_to_mp4(
     output_path: &Path,
     ffmpeg_path: &str,
 ) -> Result<(), String> {
+    debug!(
+        "Converting TS segments from {:?} to {:?}",
+        temp_dir, output_path
+    );
     let concat_file = temp_dir.join("concat.txt");
     let mut entries: Vec<_> = std::fs::read_dir(temp_dir)
         .map_err(|e| format!("Failed to read temp dir: {}", e))?
@@ -31,11 +36,15 @@ pub fn convert_to_mp4(
     }
 
     let output = Command::new(ffmpeg_path)
-        .args(&[
-            "-f", "concat",
-            "-safe", "0",
-            "-i", concat_file.to_string_lossy().as_ref(),
-            "-c", "copy",
+        .args([
+            "-f",
+            "concat",
+            "-safe",
+            "0",
+            "-i",
+            concat_file.to_string_lossy().as_ref(),
+            "-c",
+            "copy",
             "-y",
             output_path.to_string_lossy().as_ref(),
         ])
@@ -46,8 +55,10 @@ pub fn convert_to_mp4(
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
+        error!("FFmpeg conversion failed: {}", stderr);
         return Err(format!("ffmpeg failed: {}", stderr));
     }
 
+    info!("Conversion complete: {:?}", output_path);
     Ok(())
 }

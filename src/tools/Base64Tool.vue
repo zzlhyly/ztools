@@ -37,25 +37,47 @@ const handleClear = () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.base64.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.base64.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input>
-      <ToolTextarea v-model="input" :placeholder="t('common.placeholder')" submit-hotkey @submit="handleEncode" />
+      <ToolTextarea
+        v-model="input"
+        :placeholder="t('common.placeholder')"
+        submit-hotkey
+        @submit="handleEncode"
+      />
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Lock" @click="handleEncode">
+      <el-button
+        type="primary"
+        :icon="Lock"
+        @click="handleEncode"
+      >
         {{ t('common.encode') }}
       </el-button>
-      <el-button :icon="Unlock" @click="handleDecode">
+      <el-button
+        :icon="Unlock"
+        @click="handleDecode"
+      >
         {{ t('common.decode') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" language="text" />
+      <CodeOutput
+        :content="output"
+        language="text"
+      />
     </template>
   </ToolLayout>
 </template>

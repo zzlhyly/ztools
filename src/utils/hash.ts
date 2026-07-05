@@ -220,13 +220,6 @@ export async function hashFile(path: string, algorithm: HashAlgorithm = 'SHA-256
   try {
     return await invoke<string>('hash_file', { path, algorithm })
   } catch (e) {
-    const msg = String(e)
-    if (msg.includes('not found') || msg.includes('No such file')) {
-      throw new TauriError(msg, 'FILE_NOT_FOUND')
-    }
-    if (msg.includes('Permission') || msg.includes('permission')) {
-      throw new TauriError(msg, 'PERMISSION_DENIED')
-    }
-    throw new TauriError(msg, 'UNKNOWN')
+    throw TauriError.from(e)
   }
 }

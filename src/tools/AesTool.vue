@@ -136,19 +136,60 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.aes.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.aes.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input-actions>
-      <el-select v-model="mode" size="small" style="width: 100px">
-        <el-option v-for="m in MODES" :key="m" :label="m" :value="m" />
+      <el-select
+        v-model="mode"
+        size="small"
+        style="width: 100px"
+      >
+        <el-option
+          v-for="m in MODES"
+          :key="m"
+          :label="m"
+          :value="m"
+        />
       </el-select>
-      <el-select v-model="keySize" size="small" style="width: 110px">
-        <el-option v-for="ks in KEY_SIZES" :key="ks" :label="`${ks} bit`" :value="ks" />
+      <el-select
+        v-model="keySize"
+        size="small"
+        style="width: 110px"
+      >
+        <el-option
+          v-for="ks in KEY_SIZES"
+          :key="ks"
+          :label="`${ks} bit`"
+          :value="ks"
+        />
       </el-select>
-      <el-select v-if="showPadding" v-model="padding" size="small" style="width: 120px">
-        <el-option v-for="p in PADDINGS" :key="p" :label="p" :value="p" />
+      <el-select
+        v-if="showPadding"
+        v-model="padding"
+        size="small"
+        style="width: 120px"
+      >
+        <el-option
+          v-for="p in PADDINGS"
+          :key="p"
+          :label="p"
+          :value="p"
+        />
       </el-select>
-      <el-select v-model="outputFormat" size="small" style="width: 110px">
-        <el-option v-for="f in OUTPUT_FORMATS" :key="f" :label="f" :value="f" />
+      <el-select
+        v-model="outputFormat"
+        size="small"
+        style="width: 110px"
+      >
+        <el-option
+          v-for="f in OUTPUT_FORMATS"
+          :key="f"
+          :label="f"
+          :value="f"
+        />
       </el-select>
     </template>
 
@@ -163,8 +204,17 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
         <div class="key-iv-row">
           <div class="key-iv-field">
             <span class="key-iv-label">{{ t('common.key') }}:</span>
-            <el-input v-model="keyHex" :placeholder="t('common.keyHex')" size="small" class="key-iv-input" />
-            <el-button :icon="RefreshCw" size="small" @click="handleGenerateKey">
+            <el-input
+              v-model="keyHex"
+              :placeholder="t('common.keyHex')"
+              size="small"
+              class="key-iv-input"
+            />
+            <el-button
+              :icon="RefreshCw"
+              size="small"
+              @click="handleGenerateKey"
+            >
               {{ t('common.random') }}
             </el-button>
           </div>
@@ -172,32 +222,59 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
         <div class="key-iv-row">
           <div class="key-iv-field">
             <span class="key-iv-label">{{ t('common.iv') }}:</span>
-            <el-input v-model="ivHex" :placeholder="t('common.ivHex')" size="small" class="key-iv-input" />
-            <el-button :icon="RefreshCw" size="small" @click="handleGenerateIv">
+            <el-input
+              v-model="ivHex"
+              :placeholder="t('common.ivHex')"
+              size="small"
+              class="key-iv-input"
+            />
+            <el-button
+              :icon="RefreshCw"
+              size="small"
+              @click="handleGenerateIv"
+            >
               {{ t('common.random') }}
             </el-button>
           </div>
         </div>
-        <div v-if="showWarning" class="no-padding-warning">
+        <div
+          v-if="showWarning"
+          class="no-padding-warning"
+        >
           {{ noPaddingWarning }}
         </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Lock" :loading="isProcessing" @click="handleEncrypt">
+      <el-button
+        type="primary"
+        :icon="Lock"
+        :loading="isProcessing"
+        @click="handleEncrypt"
+      >
         {{ t('common.encrypt') }}
       </el-button>
-      <el-button :icon="Unlock" :loading="isProcessing" @click="handleDecrypt">
+      <el-button
+        :icon="Unlock"
+        :loading="isProcessing"
+        @click="handleDecrypt"
+      >
         {{ t('common.decrypt') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" language="text" />
+      <CodeOutput
+        :content="output"
+        language="text"
+      />
     </template>
   </ToolLayout>
 </template>

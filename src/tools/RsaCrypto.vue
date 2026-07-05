@@ -148,16 +148,47 @@ watch([publicKey, encryptPadding], () => {
 </script>
 
 <template>
-  <ToolLayout :title="t('tools.rsaCrypto.name')" output-copyable @copy="handleCopy">
+  <ToolLayout
+    :title="t('tools.rsaCrypto.name')"
+    output-copyable
+    @copy="handleCopy"
+  >
     <template #input-actions>
-      <el-select v-model="encryptPadding" size="small" style="width: 160px">
-        <el-option v-for="p in ENCRYPT_PADDINGS" :key="p" :label="p" :value="p" />
+      <el-select
+        v-model="encryptPadding"
+        size="small"
+        style="width: 160px"
+      >
+        <el-option
+          v-for="p in ENCRYPT_PADDINGS"
+          :key="p"
+          :label="p"
+          :value="p"
+        />
       </el-select>
-      <el-select v-model="signPadding" size="small" style="width: 150px">
-        <el-option v-for="p in SIGN_PADDINGS" :key="p" :label="p" :value="p" />
+      <el-select
+        v-model="signPadding"
+        size="small"
+        style="width: 150px"
+      >
+        <el-option
+          v-for="p in SIGN_PADDINGS"
+          :key="p"
+          :label="p"
+          :value="p"
+        />
       </el-select>
-      <el-select v-model="outputFormat" size="small" style="width: 110px">
-        <el-option v-for="f in OUTPUT_FORMATS" :key="f" :label="f" :value="f" />
+      <el-select
+        v-model="outputFormat"
+        size="small"
+        style="width: 110px"
+      >
+        <el-option
+          v-for="f in OUTPUT_FORMATS"
+          :key="f"
+          :label="f"
+          :value="f"
+        />
       </el-select>
     </template>
 
@@ -169,7 +200,10 @@ watch([publicKey, encryptPadding], () => {
           submit-hotkey
           @submit="handleEncrypt"
         />
-        <div v-if="maxPayloadHint" class="payload-hint">
+        <div
+          v-if="maxPayloadHint"
+          class="payload-hint"
+        >
           {{ maxPayloadHint }}
         </div>
         <el-input
@@ -186,7 +220,10 @@ watch([publicKey, encryptPadding], () => {
           :placeholder="t('common.privateKey')"
           class="key-input"
         />
-        <div v-if="signatureForVerify" class="signature-row">
+        <div
+          v-if="signatureForVerify"
+          class="signature-row"
+        >
           <label class="signature-label">Signature</label>
           <el-input
             v-model="signatureForVerify"
@@ -198,25 +235,52 @@ watch([publicKey, encryptPadding], () => {
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Lock" :disabled="encryptDisabled" :loading="isProcessing" @click="handleEncrypt">
+      <el-button
+        type="primary"
+        :icon="Lock"
+        :disabled="encryptDisabled"
+        :loading="isProcessing"
+        @click="handleEncrypt"
+      >
         {{ t('common.publicEncrypt') }}
       </el-button>
-      <el-button :icon="Unlock" :disabled="!privateKey.trim() || !input.trim()" :loading="isProcessing" @click="handleDecrypt">
+      <el-button
+        :icon="Unlock"
+        :disabled="!privateKey.trim() || !input.trim()"
+        :loading="isProcessing"
+        @click="handleDecrypt"
+      >
         {{ t('common.privateDecrypt') }}
       </el-button>
-      <el-button :icon="FileSignature" :disabled="!privateKey.trim() || !input.trim()" :loading="isProcessing" @click="handleSign">
+      <el-button
+        :icon="FileSignature"
+        :disabled="!privateKey.trim() || !input.trim()"
+        :loading="isProcessing"
+        @click="handleSign"
+      >
         {{ t('common.privateSign') }}
       </el-button>
-      <el-button :icon="Fingerprint" :disabled="!publicKey.trim() || !input.trim()" :loading="isProcessing" @click="handleVerify">
+      <el-button
+        :icon="Fingerprint"
+        :disabled="!publicKey.trim() || !input.trim()"
+        :loading="isProcessing"
+        @click="handleVerify"
+      >
         {{ t('common.publicVerify') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" language="text" />
+      <CodeOutput
+        :content="output"
+        language="text"
+      />
     </template>
   </ToolLayout>
 </template>

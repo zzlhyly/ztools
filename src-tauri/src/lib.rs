@@ -1,10 +1,69 @@
 mod m3u8;
 
+use m3u8::playlist;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use tauri::State;
-use m3u8::playlist;
-use serde::{Deserialize, Serialize};
+use tracing::{debug, error, info};
+
+/// Unified application error with machine-readable codes for the frontend `TauriError` contract.
+#[derive(Debug, thiserror::Error)]
+pub enum AppError {
+    #[error("[NETWORK_ERROR] {0}")]
+    Http(#[from] reqwest::Error),
+
+    #[error("[FILE_NOT_FOUND] {0}")]
+    FileNotFound(String),
+
+    #[error("[PERMISSION_DENIED] {0}")]
+    PermissionDenied(String),
+
+    #[error("[PARSE_ERROR] {0}")]
+    Parse(String),
+
+    #[error("[ENCRYPTION_ERROR] {0}")]
+    Encryption(String),
+
+    #[error("[FFMPEG_ERROR] {0}")]
+    Ffmpeg(String),
+
+    #[error("[INVALID_INPUT] {0}")]
+    InvalidInput(String),
+
+    #[error("[UNSUPPORTED] {0}")]
+    Unsupported(String),
+
+    #[error("[UNKNOWN] {0}")]
+    Unknown(String),
+}
+
+// Tauri v2 requires error types to implement Serialize.
+// We serialize as the Display string which already contains the [CODE] prefix.
+impl serde::Serialize for AppError {
+    fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+// Manual impls for when we need to chain non-reqwest errors
+impl From<String> for AppError {
+    fn from(s: String) -> Self {
+        AppError::Unknown(s)
+    }
+}
+
+impl AppError {
+    pub fn io(e: std::io::Error, path: &str) -> Self {
+        match e.kind() {
+            std::io::ErrorKind::NotFound => AppError::FileNotFound(format!("{}: {}", path, e)),
+            std::io::ErrorKind::PermissionDenied => {
+                AppError::PermissionDenied(format!("{}: {}", path, e))
+            }
+            _ => AppError::Unknown(format!("I/O error on {}: {}", path, e)),
+        }
+    }
+}
 
 pub struct DownloadState {
     pub active_downloads: Mutex<HashMap<String, bool>>,
@@ -18,37 +77,49 @@ impl DownloadState {
     }
 }
 
+impl Default for DownloadState {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 #[derive(Debug, Serialize)]
 pub struct FetchPageResult {
     html: String,
     final_url: String,
 }
 
+#[tracing::instrument]
 #[tauri::command]
 async fn fetch_page(
     url: String,
     headers: HashMap<String, String>,
-) -> Result<FetchPageResult, String> {
+) -> Result<FetchPageResult, AppError> {
+    debug!("Fetching page: {}", url);
     let client = reqwest::Client::builder()
-        .build()
-        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
+        .build()?;
 
     let mut request = client.get(&url);
     for (key, value) in &headers {
         request = request.header(key.as_str(), value.as_str());
     }
 
-    let response = request
-        .send()
-        .await
-        .map_err(|e| format!("HTTP request failed: {}", e))?;
+    let response = request.send().await.map_err(|e| {
+        error!("HTTP request failed for {}: {}", url, e);
+        AppError::Http(e)
+    })?;
 
+    let status = response.status();
     let final_url = response.url().to_string();
-    let html = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read response body: {}", e))?;
+    debug!("Response status: {} for {}", status, final_url);
+    let html = response.text().await.map_err(|e| {
+        error!("Failed to read response body: {}", e);
+        AppError::Http(e)
+    })?;
 
+    info!("Fetched page: {} ({} bytes)", final_url, html.len());
     Ok(FetchPageResult { html, final_url })
 }
 
@@ -56,7 +127,7 @@ async fn fetch_page(
 async fn parse_m3u8_urls(
     html: String,
     base_url: String,
-) -> Result<Vec<playlist::M3u8UrlInfo>, String> {
+) -> Result<Vec<playlist::M3u8UrlInfo>, AppError> {
     Ok(playlist::extract_m3u8_urls(&html, &base_url))
 }
 
@@ -68,42 +139,52 @@ pub struct ParseM3u8Result {
     has_encryption: bool,
 }
 
+#[tracing::instrument]
 #[tauri::command]
 async fn parse_m3u8(
     url: String,
     headers: HashMap<String, String>,
-) -> Result<ParseM3u8Result, String> {
+) -> Result<ParseM3u8Result, AppError> {
+    debug!("Parsing M3U8: {}", url);
     let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
-        .map_err(|e| format!("Failed to build HTTP client: {}", e))?;
+        .map_err(|e| {
+            error!("Failed to build HTTP client: {}", e);
+            AppError::Http(e)
+        })?;
 
     let mut request = client.get(&url);
     for (key, value) in &headers {
         request = request.header(key.as_str(), value.as_str());
     }
 
-    let response = request
-        .send()
-        .await
-        .map_err(|e| format!("Failed to fetch M3U8: {}", e))?;
+    let response = request.send().await.map_err(|e| {
+        error!("Failed to fetch M3U8 {}: {}", url, e);
+        AppError::Http(e)
+    })?;
 
-    let content = response
-        .text()
-        .await
-        .map_err(|e| format!("Failed to read M3U8 content: {}", e))?;
+    let content = response.text().await.map_err(|e| {
+        error!("Failed to read M3U8 content: {}", e);
+        AppError::Http(e)
+    })?;
 
+    debug!("Parsing M3U8 content ({} bytes)", content.len());
     let info = playlist::parse_m3u8(&content);
 
     if !info.has_endlist {
-        return Err("Live streams are not supported".to_string());
+        return Err(AppError::Unsupported(
+            "Live streams are not supported".into(),
+        ));
     }
 
     for key in &info.keys {
         if key.method != "AES-128" && key.method != "NONE" {
-            return Err(format!(
+            return Err(AppError::Unsupported(format!(
                 "Encryption method not supported: {}",
                 key.method
-            ));
+            )));
         }
     }
 
@@ -112,6 +193,12 @@ async fn parse_m3u8(
         playlist::PlaylistType::Media => "media".to_string(),
     };
 
+    info!(
+        "Parsed M3U8: type={}, segments={}, encrypted={}",
+        playlist_type,
+        info.segments.len(),
+        info.has_encryption
+    );
     Ok(ParseM3u8Result {
         playlist_type,
         qualities: info.qualities,
@@ -131,14 +218,22 @@ pub struct DownloadConfig {
     pub max_segment_concurrent: usize,
 }
 
+#[tracing::instrument(skip(config, state, app_handle))]
 #[tauri::command]
 async fn start_download(
     config: DownloadConfig,
     state: State<'_, DownloadState>,
     app_handle: tauri::AppHandle,
-) -> Result<(), String> {
+) -> Result<(), AppError> {
+    info!(
+        "Starting download: task_id={}, url={}",
+        config.task_id, config.m3u8_url
+    );
     {
-        let mut active = state.active_downloads.lock().map_err(|e| e.to_string())?;
+        let mut active = state.active_downloads.lock().map_err(|e| {
+            error!("Failed to lock download state: {}", e);
+            AppError::Unknown(e.to_string())
+        })?;
         active.insert(config.task_id.clone(), false);
     }
 
@@ -147,44 +242,49 @@ async fn start_download(
 
     // Spawn async download in background
     tauri::async_runtime::spawn(async move {
-        let result = m3u8::downloader::run_download(
-            &config,
-            &app_handle_clone,
-        ).await;
+        let result = m3u8::downloader::run_download(&config, &app_handle_clone).await;
 
         if let Err(e) = result {
+            error!("Download failed: task_id={}, error={}", task_id_clone, e);
             use tauri::Emitter;
-            let _ = app_handle_clone.emit("download-error", serde_json::json!({
-                "task_id": task_id_clone,
-                "error": e,
-            }));
+            let _ = app_handle_clone.emit(
+                "download-error",
+                serde_json::json!({
+                    "task_id": task_id_clone,
+                    "error": e.to_string(),
+                }),
+            );
         }
     });
 
     Ok(())
 }
 
+#[tracing::instrument(skip(state))]
 #[tauri::command]
-async fn cancel_download(
-    task_id: String,
-    state: State<'_, DownloadState>,
-) -> Result<(), String> {
-    let mut active = state.active_downloads.lock().map_err(|e| e.to_string())?;
+async fn cancel_download(task_id: String, state: State<'_, DownloadState>) -> Result<(), AppError> {
+    info!("Cancelling download: task_id={}", task_id);
+    let mut active = state
+        .active_downloads
+        .lock()
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
     if let Some(cancel_flag) = active.get_mut(&task_id) {
         *cancel_flag = true;
+        info!("Download cancelled: task_id={}", task_id);
     }
     Ok(())
 }
 
 /// Hash a file with the specified algorithm using ring (SHA-NI) for hardware acceleration.
+#[tracing::instrument]
 #[tauri::command]
-async fn hash_file(path: String, algorithm: String) -> Result<String, String> {
+async fn hash_file(path: String, algorithm: String) -> Result<String, AppError> {
+    debug!("Hashing file: path={}, algorithm={}", path, algorithm);
     tokio::task::spawn_blocking(move || {
-        use std::io::Read;
         use ring::digest::{Context, SHA1_FOR_LEGACY_USE_ONLY, SHA256, SHA384, SHA512};
+        use std::io::Read;
 
-        let mut file = std::fs::File::open(&path)
-            .map_err(|e| format!("Failed to open file: {}", e))?;
+        let mut file = std::fs::File::open(&path).map_err(|e| AppError::io(e, &path))?;
 
         let mut buf = [0u8; 1_048_576];
 
@@ -192,8 +292,10 @@ async fn hash_file(path: String, algorithm: String) -> Result<String, String> {
             "SHA-1" => {
                 let mut ctx = Context::new(&SHA1_FOR_LEGACY_USE_ONLY);
                 loop {
-                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
-                    if n == 0 { break; }
+                    let n = file.read(&mut buf).map_err(|e| AppError::io(e, &path))?;
+                    if n == 0 {
+                        break;
+                    }
                     ctx.update(&buf[..n]);
                 }
                 hex::encode(ctx.finish().as_ref())
@@ -201,8 +303,10 @@ async fn hash_file(path: String, algorithm: String) -> Result<String, String> {
             "SHA-256" => {
                 let mut ctx = Context::new(&SHA256);
                 loop {
-                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
-                    if n == 0 { break; }
+                    let n = file.read(&mut buf).map_err(|e| AppError::io(e, &path))?;
+                    if n == 0 {
+                        break;
+                    }
                     ctx.update(&buf[..n]);
                 }
                 hex::encode(ctx.finish().as_ref())
@@ -210,8 +314,10 @@ async fn hash_file(path: String, algorithm: String) -> Result<String, String> {
             "SHA-384" => {
                 let mut ctx = Context::new(&SHA384);
                 loop {
-                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
-                    if n == 0 { break; }
+                    let n = file.read(&mut buf).map_err(|e| AppError::io(e, &path))?;
+                    if n == 0 {
+                        break;
+                    }
                     ctx.update(&buf[..n]);
                 }
                 hex::encode(ctx.finish().as_ref())
@@ -219,20 +325,27 @@ async fn hash_file(path: String, algorithm: String) -> Result<String, String> {
             "SHA-512" => {
                 let mut ctx = Context::new(&SHA512);
                 loop {
-                    let n = file.read(&mut buf).map_err(|e| format!("Read error: {}", e))?;
-                    if n == 0 { break; }
+                    let n = file.read(&mut buf).map_err(|e| AppError::io(e, &path))?;
+                    if n == 0 {
+                        break;
+                    }
                     ctx.update(&buf[..n]);
                 }
                 hex::encode(ctx.finish().as_ref())
             }
-            _ => return Err(format!("Unsupported hash algorithm: {}", algorithm)),
+            _ => {
+                return Err(AppError::InvalidInput(format!(
+                    "Unsupported hash algorithm: {}",
+                    algorithm
+                )))
+            }
         };
 
         Ok(hash)
-    }).await.map_err(|e| format!("Hash task panicked: {}", e))?
+    })
+    .await
+    .map_err(|e| AppError::Unknown(format!("Hash task panicked: {}", e)))?
 }
-
-
 
 #[tauri::command]
 fn get_default_download_dir() -> String {
@@ -242,7 +355,7 @@ fn get_default_download_dir() -> String {
 }
 
 #[tauri::command]
-async fn check_ffmpeg(ffmpeg_path: String) -> Result<bool, String> {
+async fn check_ffmpeg(ffmpeg_path: String) -> Result<bool, AppError> {
     let output = std::process::Command::new(&ffmpeg_path)
         .arg("-version")
         .output();
@@ -251,6 +364,15 @@ async fn check_ffmpeg(ffmpeg_path: String) -> Result<bool, String> {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .init();
+
+    info!("ztools backend starting");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
@@ -307,10 +429,7 @@ mod tests {
     #[test]
     fn test_hash_file_unsupported_algorithm() {
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(hash_file(
-            "any.txt".to_string(),
-            "MD5".to_string(),
-        ));
+        let result = rt.block_on(hash_file("any.txt".to_string(), "MD5".to_string()));
         assert!(result.is_err());
     }
 }

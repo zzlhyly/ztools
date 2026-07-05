@@ -10,7 +10,10 @@ const { t } = useI18n()
 </script>
 
 <template>
-  <div class="app-container" :class="{ 'sidebar-collapsed': appStore.sidebarCollapsed }">
+  <div
+    class="app-container"
+    :class="{ 'sidebar-collapsed': appStore.sidebarCollapsed }"
+  >
     <TitleBar :title="t('app.title')" />
     <GlobalToolbar />
     <div class="app-content">

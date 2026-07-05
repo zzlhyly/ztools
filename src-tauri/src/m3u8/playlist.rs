@@ -1,5 +1,6 @@
-use serde::{Deserialize, Serialize};
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use tracing::debug;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct M3u8Quality {
@@ -48,16 +49,25 @@ pub struct M3u8UrlInfo {
 
 /// Parse an M3U8 playlist string and return structured info.
 pub fn parse_m3u8(content: &str) -> PlaylistInfo {
+    debug!("Parsing M3U8 playlist ({} bytes)", content.len());
     let lines: Vec<&str> = content.lines().map(|l| l.trim()).collect();
 
     let has_master = lines.iter().any(|l| l.starts_with("#EXT-X-STREAM-INF"));
     let has_endlist = lines.iter().any(|l| l.starts_with("#EXT-X-ENDLIST"));
 
-    if has_master {
+    let result = if has_master {
         parse_master_playlist(&lines)
     } else {
         parse_media_playlist(&lines, has_endlist, content)
-    }
+    };
+    debug!(
+        "Parsed playlist: type={:?}, qualities={}, segments={}, encrypted={}",
+        result.playlist_type,
+        result.qualities.len(),
+        result.segments.len(),
+        result.has_encryption
+    );
+    result
 }
 
 fn parse_master_playlist(lines: &[&str]) -> PlaylistInfo {
@@ -81,12 +91,12 @@ fn parse_master_playlist(lines: &[&str]) -> PlaylistInfo {
                 resolution = res_part[..res_end].to_string();
             }
 
-            for j in i + 1..lines.len() {
-                if !lines[j].is_empty() && !lines[j].starts_with('#') {
+            for (j, line_j) in lines.iter().enumerate().skip(i + 1) {
+                if !line_j.is_empty() && !line_j.starts_with('#') {
                     qualities.push(M3u8Quality {
                         bandwidth,
                         resolution: resolution.clone(),
-                        url: lines[j].to_string(),
+                        url: line_j.to_string(),
                     });
                     i = j;
                     break;
@@ -166,10 +176,10 @@ fn parse_media_playlist(lines: &[&str], has_endlist: bool, raw: &str) -> Playlis
             });
 
             // Look ahead for the URL on the next lines
-            for j in i + 1..lines.len() {
-                if !lines[j].is_empty() && !lines[j].starts_with('#') {
+            for line_j in lines.iter().skip(i + 1) {
+                if !line_j.is_empty() && !line_j.starts_with('#') {
                     if let Some(seg) = segments.last_mut() {
-                        seg.url = lines[j].to_string();
+                        seg.url = line_j.to_string();
                     }
                     break;
                 }
@@ -191,6 +201,7 @@ fn parse_media_playlist(lines: &[&str], has_endlist: bool, raw: &str) -> Playlis
 
 /// Extract M3U8 URLs from HTML content.
 pub fn extract_m3u8_urls(html: &str, _base_url: &str) -> Vec<M3u8UrlInfo> {
+    debug!("Extracting M3U8 URLs from HTML ({} bytes)", html.len());
     let mut results = Vec::new();
 
     // Strategy 1: Regex for .m3u8 patterns in the HTML
@@ -261,8 +272,14 @@ mod tests {
         assert!(info.has_encryption);
         assert_eq!(info.keys.len(), 1);
         assert_eq!(info.keys[0].method, "AES-128");
-        assert_eq!(info.keys[0].uri.as_deref(), Some("https://example.com/key.bin"));
-        assert_eq!(info.keys[0].iv.as_deref(), Some("00000000000000000000000000000001"));
+        assert_eq!(
+            info.keys[0].uri.as_deref(),
+            Some("https://example.com/key.bin")
+        );
+        assert_eq!(
+            info.keys[0].iv.as_deref(),
+            Some("00000000000000000000000000000001")
+        );
         assert!(info.has_endlist);
     }
 
@@ -300,7 +317,8 @@ mod tests {
 
     #[test]
     fn test_extract_m3u8_from_raw_text() {
-        let html = r#"<script>var src = "https://cdn.example.com/stream/index.m3u8?token=abc";</script>"#;
+        let html =
+            r#"<script>var src = "https://cdn.example.com/stream/index.m3u8?token=abc";</script>"#;
         let urls = extract_m3u8_urls(html, "https://cdn.example.com/");
 
         assert_eq!(urls.len(), 1);
@@ -312,6 +330,9 @@ mod tests {
         let content = "#EXTM3U\n#EXT-X-KEY:METHOD=AES-128,URI=\"key.bin\",IV=0xABCDEF1234567890ABCDEF1234567890\n#EXTINF:10.0,\nseg1.ts\n#EXT-X-ENDLIST\n";
         let info = parse_m3u8(content);
 
-        assert_eq!(info.keys[0].iv.as_deref(), Some("ABCDEF1234567890ABCDEF1234567890"));
+        assert_eq!(
+            info.keys[0].iv.as_deref(),
+            Some("ABCDEF1234567890ABCDEF1234567890")
+        );
     }
 }

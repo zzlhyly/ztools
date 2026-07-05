@@ -61,23 +61,42 @@ const handleClear = () => {
     @copy="handleCopy"
   >
     <template #input>
-      <ToolTextarea v-model="input" :placeholder="t('common.placeholder')" submit-hotkey @submit="handleFormat" />
+      <ToolTextarea
+        v-model="input"
+        :placeholder="t('common.placeholder')"
+        submit-hotkey
+        @submit="handleFormat"
+      />
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Braces" @click="handleFormat">
+      <el-button
+        type="primary"
+        :icon="Braces"
+        @click="handleFormat"
+      >
         {{ t('common.format') }}
       </el-button>
-      <el-button :icon="Braces" @click="handleMinify">
+      <el-button
+        :icon="Braces"
+        @click="handleMinify"
+      >
         {{ t('common.minify') }}
       </el-button>
-      <el-button :icon="Trash2" @click="handleClear">
+      <el-button
+        :icon="Trash2"
+        @click="handleClear"
+      >
         {{ t('common.clear') }}
       </el-button>
     </template>
 
     <template #output>
-      <CodeOutput :content="output" :error="error" language="json" />
+      <CodeOutput
+        :content="output"
+        :error="error"
+        language="json"
+      />
     </template>
   </ToolLayout>
 </template>

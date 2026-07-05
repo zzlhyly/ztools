@@ -9,8 +9,22 @@ npm run tauri dev     # dev with Tauri window (not `npm run dev` — Vite-only, 
 npm run tauri build   # production build (runs vue-tsc → vite build first)
 npm run test          # vitest watch mode
 npm run test:run      # vitest single run
+npm run test:coverage # vitest with coverage (thresholds: 80% lines, 80% branches)
+npm run lint          # ESLint check
+npm run lint:fix      # ESLint auto-fix
+npm run format        # Prettier format
+npm run format:check  # Prettier check only
 npx vitest path/to/file   # run one test file
 ```
+
+## Rust logging
+
+Set `RUST_LOG` env var to control log level:
+```bash
+RUST_LOG=debug npm run tauri dev     # verbose logs
+RUST_LOG=info,ztools_lib::m3u8=debug npm run tauri dev  # debug for m3u8 only
+```
+Default level is `warn` (errors and warnings only).
 
 ## Architecture
 

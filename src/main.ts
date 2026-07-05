@@ -13,4 +13,16 @@ app.use(pinia)
 app.use(router)
 app.use(i18n)
 
+// Global error handler — prevents white-screen on unhandled component errors
+app.config.errorHandler = (err, _instance, info) => {
+  console.error('[Vue Error]', info, err)
+  // In production, could show a user-facing toast or fallback UI
+  // For now, log and let the app continue functioning
+}
+
+app.config.warnHandler = (msg, _instance, trace) => {
+  // Route warnings in development only
+  console.warn('[Vue Warn]', msg, trace)
+}
+
 app.mount('#app')

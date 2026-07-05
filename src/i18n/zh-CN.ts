@@ -147,4 +147,10 @@ export default {
     PARSE_ERROR: '数据解析失败',
     DOWNLOAD_ERROR: '下载失败',
   },
+  error: {
+    title: '出错了',
+    defaultMessage: '发生了意外错误，请重试。',
+    retry: '重试',
+    goHome: '返回首页',
+  },
 }

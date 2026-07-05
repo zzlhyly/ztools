@@ -52,10 +52,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div ref="containerRef" class="tool-layout">
-    <h2 class="tool-title">{{ title }}</h2>
+  <div
+    ref="containerRef"
+    class="tool-layout"
+  >
+    <h2 class="tool-title">
+      {{ title }}
+    </h2>
 
-    <div class="tool-workspace" :class="{ stacked: isStacked }">
+    <div
+      class="tool-workspace"
+      :class="{ stacked: isStacked }"
+    >
       <ToolPanel :title="inputLabel || t('common.input')">
         <template #actions>
           <slot name="input-actions" />
