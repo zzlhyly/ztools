@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import ToolLayout from '@/components/ToolLayout.vue'
 import { Trash2 } from 'lucide-vue-next'
+import { calculateCidr } from '@/utils/cidr'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -17,22 +18,6 @@ watch(input, (val) => {
 })
 
 const error = ref('')
-
-function ipToUint32(ip: string): number | null {
-  const parts = ip.split('.')
-  if (parts.length !== 4) return null
-  let result = 0
-  for (const part of parts) {
-    const oct = parseInt(part, 10)
-    if (isNaN(oct) || oct < 0 || oct > 255) return null
-    result = (result << 8) + oct
-  }
-  return result >>> 0
-}
-
-function formatIp(v: number): string {
-  return [(v >>> 24) & 0xff, (v >>> 16) & 0xff, (v >>> 8) & 0xff, v & 0xff].join('.')
-}
 
 const rows = ref<CidrRow[]>([])
 
@@ -53,29 +38,20 @@ function compute() {
     return
   }
 
-  const ip = ipToUint32(parts[0])
-  const prefix = parseInt(parts[1], 10)
-
-  if (ip === null || isNaN(prefix) || prefix < 0 || prefix > 32) {
+  const result = calculateCidr(parts[0], parseInt(parts[1], 10))
+  if (!result) {
     error.value = 'Invalid IP address or prefix length (must be 0-32)'
     rows.value = []
     return
   }
 
-  const mask = ~((1 << (32 - prefix)) - 1) >>> 0
-  const network = ip & mask
-  const broadcast = prefix === 32 ? ip : (network | (~mask >>> 0)) >>> 0
-  const total = prefix === 32 ? 1 : prefix === 31 ? 2 : (1 << (32 - prefix)) - 2
-  const firstHost = prefix >= 31 ? network : network + 1
-  const lastHost = prefix >= 31 ? broadcast : broadcast - 1
-
   rows.value = [
-    { label: 'Network Address', value: formatIp(network) },
-    { label: 'Broadcast Address', value: formatIp(broadcast) },
-    { label: 'Host Range', value: `${formatIp(firstHost)} — ${formatIp(lastHost)}` },
-    { label: 'Total Hosts', value: total.toLocaleString() },
-    { label: 'Subnet Mask', value: formatIp(mask) },
-    { label: 'Wildcard Mask', value: formatIp(~mask >>> 0) },
+    { label: 'Network Address', value: result.network },
+    { label: 'Broadcast Address', value: result.broadcast },
+    { label: 'Host Range', value: result.hostRange },
+    { label: 'Total Hosts', value: result.totalHosts.toLocaleString() },
+    { label: 'Subnet Mask', value: result.subnetMask },
+    { label: 'Wildcard Mask', value: result.wildcardMask },
   ]
 }
 

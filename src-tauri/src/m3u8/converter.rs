@@ -104,7 +104,7 @@ mod tests {
         fs::create_dir_all(&tmp).unwrap();
         let output = tmp.join("output.mp4");
 
-        let result = convert_to_mp4(&tmp, &output, "nonexistent_ffmpeg");
+        let _result = convert_to_mp4(&tmp, &output, "nonexistent_ffmpeg");
         let concat = tmp.join("concat.txt");
         let content = fs::read_to_string(&concat).unwrap_or_default();
         // Empty dir — no TS files, so concat should be empty

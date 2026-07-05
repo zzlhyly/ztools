@@ -517,4 +517,125 @@ mod tests {
         let result = rt.block_on(hash_file("any.txt".to_string(), "MD5".to_string()));
         assert!(result.is_err());
     }
+
+    // --- convert_image tests ---
+
+    #[test]
+    fn test_convert_image_png_to_jpeg() {
+        let tmp_dir = std::env::temp_dir();
+        let input_path = tmp_dir.join("ztools_test_input.png");
+        let img = image::RgbImage::new(10, 10);
+        img.save(&input_path).unwrap();
+
+        let result = convert_image(input_path.to_string_lossy().to_string(), "jpeg".to_string());
+        assert!(result.is_ok());
+
+        let val = result.unwrap();
+        let output_path = val["output_path"].as_str().unwrap().to_string();
+        let output_size = val["output_size"].as_u64().unwrap();
+        let width = val["width"].as_u64().unwrap();
+        let height = val["height"].as_u64().unwrap();
+
+        assert!(std::fs::metadata(&output_path).is_ok());
+        assert!(output_size > 0);
+        assert_eq!(width, 10);
+        assert_eq!(height, 10);
+
+        // Clean up
+        std::fs::remove_file(&input_path).ok();
+        std::fs::remove_file(&output_path).ok();
+    }
+
+    #[test]
+    fn test_convert_image_unsupported_format() {
+        let tmp_dir = std::env::temp_dir();
+        let input_path = tmp_dir.join("ztools_test_unsupported.png");
+        let img = image::RgbImage::new(1, 1);
+        img.save(&input_path).unwrap();
+
+        let result = convert_image(input_path.to_string_lossy().to_string(), "gif".to_string());
+        std::fs::remove_file(&input_path).ok();
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_convert_image_file_not_found() {
+        let result = convert_image(
+            "/nonexistent/path/image.png".to_string(),
+            "jpeg".to_string(),
+        );
+        assert!(result.is_err());
+    }
+
+    // --- detect_encoding tests ---
+
+    #[test]
+    fn test_detect_encoding_utf8_bom() {
+        let tmp = std::env::temp_dir().join("ztools_test_bom.txt");
+        let mut f = std::fs::File::create(&tmp).unwrap();
+        // UTF-8 BOM: 0xEF, 0xBB, 0xBF then "hello"
+        f.write_all(&[0xEF, 0xBB, 0xBF]).unwrap();
+        f.write_all(b"hello").unwrap();
+        f.sync_all().unwrap();
+
+        let result = detect_encoding(tmp.to_string_lossy().to_string());
+        std::fs::remove_file(&tmp).ok();
+        assert!(result.is_ok());
+
+        let val = result.unwrap();
+        assert_eq!(val["encoding"].as_str().unwrap(), "UTF-8");
+        assert!(val["confidence"].as_u64().unwrap() >= 1);
+    }
+
+    #[test]
+    fn test_detect_encoding_no_bom() {
+        let tmp = std::env::temp_dir().join("ztools_test_nobom.txt");
+        let mut f = std::fs::File::create(&tmp).unwrap();
+        f.write_all(b"hello").unwrap();
+        f.sync_all().unwrap();
+
+        let result = detect_encoding(tmp.to_string_lossy().to_string());
+        std::fs::remove_file(&tmp).ok();
+        assert!(result.is_ok());
+
+        let val = result.unwrap();
+        assert_eq!(val["encoding"].as_str().unwrap(), "UTF-8");
+    }
+
+    // --- convert_encoding tests ---
+
+    #[test]
+    fn test_convert_encoding_utf8_to_utf8() {
+        let tmp = std::env::temp_dir().join("ztools_test_conv.txt");
+        let mut f = std::fs::File::create(&tmp).unwrap();
+        f.write_all(b"hello world").unwrap();
+        f.sync_all().unwrap();
+
+        let result = convert_encoding(tmp.to_string_lossy().to_string(), "UTF-8".to_string());
+        std::fs::remove_file(&tmp).ok();
+        assert!(result.is_ok());
+
+        let val = result.unwrap();
+        let output_path = val["output_path"].as_str().unwrap();
+        assert!(std::fs::metadata(output_path).is_ok());
+        assert_eq!(val["source_encoding"].as_str().unwrap(), "UTF-8");
+        assert!(!val["had_errors"].as_bool().unwrap());
+
+        std::fs::remove_file(output_path).ok();
+    }
+
+    #[test]
+    fn test_convert_encoding_invalid_target() {
+        let tmp = std::env::temp_dir().join("ztools_test_invalid_target.txt");
+        let mut f = std::fs::File::create(&tmp).unwrap();
+        f.write_all(b"hello").unwrap();
+        f.sync_all().unwrap();
+
+        let result = convert_encoding(
+            tmp.to_string_lossy().to_string(),
+            "INVALID-ENCODING".to_string(),
+        );
+        std::fs::remove_file(&tmp).ok();
+        assert!(result.is_err());
+    }
 }
