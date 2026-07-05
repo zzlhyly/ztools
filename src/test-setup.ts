@@ -24,18 +24,19 @@ vi.mock('element-plus', async () => {
         if (args[i] instanceof ArrayBuffer) {
           args[i] = new Uint8Array(args[i])
         }
-      }
-      // Also deep-check algorithm objects for iv/counter/salt etc.
-      if (args.length >= 2 && typeof args[1] === 'object' && args[1] !== null) {
-        const algo = { ...args[1] }
-        let changed = false
-        for (const k of ['iv', 'counter', 'salt', 'additionalData']) {
-          if (algo[k] instanceof ArrayBuffer) {
-            algo[k] = new Uint8Array(algo[k])
-            changed = true
+        // Deep-check algorithm objects (may be at any position: importKey algo,
+        // encrypt/decrypt algo, generateKey algo, etc.)
+        if (i === 0 && typeof args[i] === 'object' && args[i] !== null) {
+          const algo = { ...args[i] }
+          let changed = false
+          for (const k of ['iv', 'counter', 'salt', 'additionalData']) {
+            if (algo[k] instanceof ArrayBuffer) {
+              algo[k] = new Uint8Array(algo[k])
+              changed = true
+            }
           }
+          if (changed) args[i] = algo
         }
-        if (changed) args[1] = algo
       }
       return fn.apply(this, args)
     }
