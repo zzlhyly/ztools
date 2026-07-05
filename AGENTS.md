@@ -20,10 +20,12 @@ npx vitest path/to/file   # run one test file
 ## Rust logging
 
 Set `RUST_LOG` env var to control log level:
+
 ```bash
 RUST_LOG=debug npm run tauri dev     # verbose logs
 RUST_LOG=info,ztools_lib::m3u8=debug npm run tauri dev  # debug for m3u8 only
 ```
+
 Default level is `warn` (errors and warnings only).
 
 ## Architecture
@@ -82,3 +84,67 @@ Must touch these files, in this order:
 - **Hash routing** — all URLs use `/#/toolname`, not `/toolname`
 - **Tauri window has no native decorations** (`decorations: false`) — TitleBar.vue handles dragging/minimize/maximize/close
 - **CSP is null** in tauri.conf.json — allows all content
+
+## Pre-Push Validation Checklist
+
+Before pushing any commit, run this local CI simulation. A single command alias `npm run ci:check` is planned (not yet implemented).
+
+```bash
+# Frontend
+npx vue-tsc --noEmit
+npm run lint
+npm run test:run
+npx prettier --check "src/**/*.{ts,vue,css}"
+
+# Rust
+cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+cargo fmt --manifest-path src-tauri/Cargo.toml -- --check
+cargo test --lib --manifest-path src-tauri/Cargo.toml
+```
+
+**Never push without at least `vue-tsc --noEmit` passing.**
+TypeScript strict mode (`noUnusedLocals`, `noUnusedParameters`) will fail CI if any import or variable is declared but unused.
+`npm run lint` on its own does NOT catch TS6133 — only `vue-tsc` does.
+
+## Parallel Fixer Dispatch Rules
+
+When dispatching multiple fixers in parallel for tool implementation:
+
+1. **File ownership must be exclusive.** Each fixer gets a whitelist of files they MAY modify. Shared files (router, sidebar, i18n) MUST NOT be touched by fixers — the orchestrator handles integration after all fixers return.
+
+2. **Fixer prompt template must include:**
+   - Explicit "You MAY modify these files:" whitelist
+   - Explicit "You MUST NOT touch these files:" blacklist (at minimum: `router/index.ts`, `Sidebar.vue`, `i18n/*.ts`, `Cargo.toml`, `lib.rs`)
+   - Mandatory verification step: `npm run test:run` AND `npx vue-tsc --noEmit` before reporting done
+
+3. **Integration is a separate phase.** After all fixers return, the orchestrator:
+   - Reads all created files for consistency
+   - Adds routes to `router/index.ts`
+   - Adds entries to `Sidebar.vue` (with correct lucide icon imports)
+   - Adds i18n keys to `zh-CN.ts` and `en-US.ts`
+   - Runs full validation: `vue-tsc && lint && test:run && prettier --check`
+   - Updates README.md and README_zh-CN.md
+
+4. **Never dispatch fixers when user requires TDD.** TDD implies orchestrator owns the implementation loop: write failing test → implement → see green → commit → next task. Parallel fixers cannot maintain this discipline.
+
+## Component Testing Baseline
+
+Every new tool MUST have at least one component smoke test that:
+
+- Mounts the component with required plugins (router, i18n, pinia)
+- Asserts at least one key element exists (textarea, button, etc.)
+
+Pure logic functions MUST be extracted to `src/utils/` and unit-tested there.
+Do NOT keep business logic inline in Vue `<script setup>` — extract to utils and test independently.
+
+## ESM Import Gotcha
+
+Some npm packages (notably `js-yaml`) do NOT provide a default ESM export.
+Incorrect: `import yaml from 'js-yaml'` → fails silently at runtime
+Correct: `import * as yaml from 'js-yaml'`
+
+When adding a new npm dependency, verify its ESM export shape:
+
+```bash
+node --input-type=module -e "import pkg from '<package>'; console.log(typeof pkg)"
+```
