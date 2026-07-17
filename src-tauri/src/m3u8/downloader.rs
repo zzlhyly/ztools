@@ -10,7 +10,7 @@ use std::sync::Arc;
 use tauri::AppHandle;
 use tauri::Emitter;
 use tokio::sync::Semaphore;
-use tracing::{error, info};
+use tracing::info;
 
 #[derive(Debug, Clone, Serialize)]
 struct ProgressEvent {
@@ -39,6 +39,27 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
         "Starting download: task_id={}, url={}",
         task_id, config.m3u8_url
     );
+
+    // Check if output already exists (retry after partial completion)
+    let output_dir = if config.output_dir.is_empty() {
+        dirs_next::download_dir()
+            .map(|d| d.to_string_lossy().to_string())
+            .unwrap_or_else(|| ".".to_string())
+    } else {
+        config.output_dir.clone()
+    };
+    let output_path = PathBuf::from(&output_dir).join(&config.filename);
+    if output_path.exists() {
+        info!("Output already exists, skipping: {}", output_path.display());
+        let _ = app_handle.emit(
+            "download-complete",
+            CompleteEvent {
+                task_id: task_id.clone(),
+                output_path: output_path.to_string_lossy().to_string(),
+            },
+        );
+        return Ok(());
+    }
 
     // Step 1: Fetch and parse M3U8 playlist
     let client = reqwest::Client::builder()
@@ -89,8 +110,9 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
     for (idx, key_info) in info.keys.iter().enumerate() {
         if key_info.method == "AES-128" {
             if let Some(ref uri) = key_info.uri {
+                let key_url = resolve_url(&config.m3u8_url, uri);
                 let key_response = client
-                    .get(uri)
+                    .get(&key_url)
                     .headers(build_header_map(&config.headers))
                     .send()
                     .await
@@ -288,17 +310,7 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
         return Err(AppError::from(error_msg));
     }
 
-    // Step 5: Convert to MP4
-    let output_dir = if config.output_dir.is_empty() {
-        dirs_next::download_dir()
-            .map(|d| d.to_string_lossy().to_string())
-            .unwrap_or_else(|| ".".to_string())
-    } else {
-        config.output_dir.clone()
-    };
-
-    let output_path = PathBuf::from(&output_dir).join(&config.filename);
-
+    // Step 5: Convert to MP4 (or save TS files if ffmpeg unavailable)
     let _ = app_handle.emit(
         "download-progress",
         ProgressEvent {
@@ -327,24 +339,55 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
             );
         }
         Err(e) => {
-            error!(
-                "FFmpeg failed for task {}: {}. Temp files at {:?}",
+            // ffmpeg unavailable — copy TS segments to output dir
+            eprintln!("[ztools] ffmpeg failed ({}), saving TS files...", e);
+            let ts_dir = output_path.with_file_name(format!(
+                "{}_TS",
+                output_path
+                    .file_stem()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+            ));
+            std::fs::create_dir_all(&ts_dir).ok();
+
+            let concat_file = temp_dir.join("concat.txt");
+            let mut ts_copied = 0usize;
+            let mut ts_names: Vec<String> = Vec::new();
+            if let Ok(dir_entries) = std::fs::read_dir(&temp_dir) {
+                for entry in dir_entries.flatten() {
+                    let path = entry.path();
+                    if path.extension().map(|e| e == "ts").unwrap_or(false) {
+                        if let Some(name) = path.file_name() {
+                            let dest = ts_dir.join(name);
+                            std::fs::copy(&path, &dest).ok();
+                            ts_names.push(format!("file '{}'", dest.to_string_lossy()));
+                            ts_copied += 1;
+                        }
+                    }
+                }
+            }
+            // Also copy concat.txt
+            if concat_file.exists() {
+                std::fs::copy(&concat_file, ts_dir.join("concat.txt")).ok();
+            }
+
+            // Clean up temp dir
+            let _ = std::fs::remove_dir_all(temp_dir.parent().unwrap_or(&temp_dir));
+
+            eprintln!(
+                "[ztools] TS segments saved: task_id={}, ts_dir={}, files={}",
                 task_id,
-                e,
-                temp_dir.parent()
+                ts_dir.display(),
+                ts_copied
             );
-            let _ = app_handle.emit(
-                "download-error",
-                ErrorEvent {
+            let emit_result = app_handle.emit(
+                "download-complete",
+                CompleteEvent {
                     task_id: task_id.clone(),
-                    error: format!(
-                        "FFmpeg failed: {}. Temp files preserved at {:?}",
-                        e,
-                        temp_dir.parent()
-                    ),
+                    output_path: ts_dir.to_string_lossy().to_string(),
                 },
             );
-            return Err(AppError::from(e));
+            eprintln!("[ztools] download-complete emitted: {:?}", emit_result);
         }
     }
 

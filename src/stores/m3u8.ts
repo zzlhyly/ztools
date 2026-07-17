@@ -83,7 +83,18 @@ function loadTasks(): M3u8Task[] {
   try {
     const raw = localStorage.getItem('m3u8_tasks')
     if (raw) {
-      return JSON.parse(raw)
+      const tasks: M3u8Task[] = JSON.parse(raw)
+      // Reset in-progress tasks from previous sessions (process was killed)
+      return tasks.map((t) => {
+        if (t.status === 'downloading' || t.status === 'converting' || t.status === 'parsing') {
+          return {
+            ...t,
+            status: 'cancelled' as const,
+            error: '进程已中断，请重试',
+          }
+        }
+        return t
+      })
     }
   } catch {
     /* ignore parse errors */

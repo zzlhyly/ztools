@@ -10,7 +10,6 @@ import {
   invokeParseM3u8,
   invokeStartDownload,
   invokeCancelDownload,
-  invokeCheckFfmpeg,
   invokeGetDefaultDownloadDir,
   onDownloadProgress,
   onDownloadComplete,
@@ -55,13 +54,14 @@ onMounted(async () => {
       speed: event.speed,
       downloaded: event.downloaded,
       total: event.total,
-      status: 'downloading',
+      status: event.percent === 100 ? 'converting' : 'downloading',
     })
   })
   unlistenComplete = await onDownloadComplete((event) => {
     store.updateTask(event.task_id, {
       status: 'done',
       progress: 100,
+      speed: '',
       completedAt: Date.now(),
     })
     ElMessage.success(t('common.done'))
@@ -167,12 +167,6 @@ async function handleAddTask() {
 }
 
 async function startFromDirectUrl(url: string, headers: Record<string, string>) {
-  const hasFfmpeg = await invokeCheckFfmpeg(store.config.ffmpegPath)
-  if (!hasFfmpeg) {
-    ElMessage.error(t('common.ffmpegNotFound'))
-    return
-  }
-
   const task = store.addTask(url, 'direct')
   task.m3u8Url = url
 
@@ -351,12 +345,6 @@ async function handleCancelTask(taskId: string) {
 async function handleRetryTask(taskId: string) {
   const task = store.tasks.find((t) => t.id === taskId)
   if (!task) return
-
-  const hasFfmpeg = await invokeCheckFfmpeg(store.config.ffmpegPath)
-  if (!hasFfmpeg) {
-    ElMessage.error(t('common.ffmpegNotFound'))
-    return
-  }
 
   store.retryTask(taskId)
   await doStartDownload(task, task.m3u8Url || task.url, store.config.downloadDir)
@@ -624,7 +612,9 @@ onUnmounted(() => {
           />
           <div class="task-actions">
             <el-button
-              v-if="task.status === 'error' || task.status === 'cancelled'"
+              v-if="
+                task.status === 'error' || task.status === 'cancelled' || task.status === 'done'
+              "
               :icon="RotateCcw"
               size="small"
               circle
