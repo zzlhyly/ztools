@@ -75,6 +75,11 @@ async function handleParseList() {
   const url = urlInput.value.trim()
   if (!url) return
 
+  if (!siteKey.value) {
+    ElMessage.warning('请先选择或输入站点 Key')
+    return
+  }
+
   const tagId = extractTagId(url)
   if (!tagId) {
     ElMessage.error('未识别的列表页 URL，需要包含 /tag/数字')
@@ -85,12 +90,15 @@ async function handleParseList() {
   videos.value = []
 
   try {
+    console.log('[crawler] Parsing list:', url, 'tag:', tagId, 'site:', siteKey.value)
     const list = await invokeCrawlListFromUrl(url, tagId, siteKey.value)
+    console.log('[crawler] Got', list.length, 'videos')
     videos.value = list
     selectedIds.value = new Set()
     currentPage.value = 1
     ElMessage.success(`找到 ${list.length} 个视频`)
   } catch (err: any) {
+    console.error('[crawler] Parse error:', err)
     ElMessage.error(String(err))
   } finally {
     loading.value = false
