@@ -37,7 +37,7 @@ function onSiteChange(key: string) {
   siteKey.value = key
   const site = sites.value.find((s) => s.key === key)
   if (site && !urlInput.value) {
-    urlInput.value = `https://${site.page_domain}/video-list/tag/`
+    urlInput.value = site.list_url_pattern || `https://${site.page_domain}/video-list/tag/`
   }
 }
 
@@ -107,12 +107,14 @@ function getBaseUrl(url: string): string {
 }
 
 async function handleCrawlSingle(videoId: number) {
-  const baseUrl = getBaseUrl(urlInput.value)
-  if (!baseUrl) return
+  const site = sites.value.find((s) => s.key === siteKey.value)
+  if (!site) return
 
   try {
     crawlProgress.value = `正在获取 #${videoId}...`
-    const pageUrl = `${baseUrl}/video-details/${videoId}`
+    const pageUrl = site.detail_url_pattern
+      ? site.detail_url_pattern.replace('{video_id}', String(videoId))
+      : `${getBaseUrl(urlInput.value)}/video-details/${videoId}`
     const result = await invokeCrawlVideoFromUrl(pageUrl, videoId, siteKey.value)
 
     crawlProgress.value = `解析 #${videoId}...`

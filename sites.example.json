@@ -3,6 +3,8 @@
     "fernet_key": "your_fernet_key_here",
     "api_base": "api.example.com",
     "page_domain": "www.example.com",
+    "list_url_pattern": "https://www.example.com/video-list/tag/{tag_id}",
+    "detail_url_pattern": "https://www.example.com/video-details/{video_id}",
     "referer": "https://www.example.com/",
     "origin": "https://www.example.com"
   }

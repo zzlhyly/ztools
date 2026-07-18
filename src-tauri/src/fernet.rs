@@ -22,6 +22,10 @@ pub(crate) struct SiteEntry {
     pub(crate) fernet_key: String,
     pub(crate) api_base: String,
     pub(crate) page_domain: String,
+    #[serde(default)]
+    pub(crate) list_url_pattern: String,
+    #[serde(default)]
+    pub(crate) detail_url_pattern: String,
     pub(crate) referer: String,
     pub(crate) origin: String,
 }

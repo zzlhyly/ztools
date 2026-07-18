@@ -281,6 +281,8 @@ async fn cancel_download(task_id: String, state: State<'_, DownloadState>) -> Re
 struct SiteInfo {
     key: String,
     page_domain: String,
+    list_url_pattern: String,
+    detail_url_pattern: String,
 }
 
 #[tauri::command]
@@ -291,6 +293,8 @@ fn list_sites() -> Vec<SiteInfo> {
         .map(|(k, v)| SiteInfo {
             key: k.clone(),
             page_domain: v.page_domain.clone(),
+            list_url_pattern: v.list_url_pattern.clone(),
+            detail_url_pattern: v.detail_url_pattern.clone(),
         })
         .collect()
 }

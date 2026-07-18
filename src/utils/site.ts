@@ -75,6 +75,8 @@ export async function invokeCrawlVideoFromUrl(
 export interface SiteInfo {
   key: string
   page_domain: string
+  list_url_pattern: string
+  detail_url_pattern: string
 }
 
 export async function invokeListSites(): Promise<SiteInfo[]> {

@@ -20,6 +20,7 @@ A desktop toolkit application for developers, built with [Tauri v2](https://taur
 - **HMAC Calculator** - Compute HMAC message authentication codes (SHA-1/256/384/512)
 - **UUID Generator** - Generate UUID v4 identifiers in batch
 - **M3U8 Downloader** - Download M3U8 videos and convert to MP4 with AES-128 decryption support
+- **Site Crawler** - Crawl video sites, decrypt Fernet-protected API responses, and batch download videos
 - **JWT Debugger** - Decode and inspect JWT tokens (header, payload, signature verification)
 - **YAML ↔ JSON Converter** - Bidirectional conversion between YAML and JSON formats
 - **SQL Formatter** - Format and beautify SQL queries with keyword capitalization
@@ -98,6 +99,32 @@ RUST_LOG=info,ztools_lib::m3u8=debug npm run tauri dev  # debug for m3u8 only
 ```
 
 Default level is `warn`.
+
+## Site Crawler Configuration
+
+The Site Crawler tool reads site-specific settings from `sites.json` (not committed to git). Copy the template and fill in your values:
+
+```bash
+cp sites.example.json sites.json
+```
+
+Edit `sites.json` with your site's configuration:
+
+```json
+{
+  "your_site_key": {
+    "fernet_key": "your_fernet_key_here",
+    "api_base": "api.example.com",
+    "page_domain": "www.example.com",
+    "list_url_pattern": "https://www.example.com/video-list/tag/{tag_id}",
+    "detail_url_pattern": "https://www.example.com/video-details/{video_id}",
+    "referer": "https://www.example.com/",
+    "origin": "https://www.example.com"
+  }
+}
+```
+
+The tool supports any site that uses the same architecture (Fernet-encrypted CONFIG + REST API with encrypted `x-data` responses). Multiple sites can be configured by adding more entries to the JSON.
 
 ## Building
 
