@@ -71,3 +71,12 @@ export async function invokeCrawlVideoFromUrl(
 ): Promise<CrawlResult> {
   return invoke<CrawlResult>('crawl_video_from_url', { pageUrl, videoId, siteKey })
 }
+
+export interface SiteInfo {
+  key: string
+  page_domain: string
+}
+
+export async function invokeListSites(): Promise<SiteInfo[]> {
+  return invoke<SiteInfo[]>('list_sites')
+}

@@ -1,15 +1,22 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useM3u8Store } from '@/stores/m3u8'
 import { invokeParseM3u8, invokeStartDownload, type DownloadConfig } from '@/utils/m3u8'
-import { invokeCrawlListFromUrl, invokeCrawlVideoFromUrl, type VideoListItem } from '@/utils/site'
+import {
+  invokeCrawlListFromUrl,
+  invokeCrawlVideoFromUrl,
+  invokeListSites,
+  type VideoListItem,
+  type SiteInfo,
+} from '@/utils/site'
 import { Search, Download } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const m3u8Store = useM3u8Store()
 
+const sites = ref<SiteInfo[]>([])
 const siteKey = ref('')
 const urlInput = ref('')
 const loading = ref(false)
@@ -17,6 +24,22 @@ const crawling = ref(false)
 const videos = ref<VideoListItem[]>([])
 const selectedIds = ref<Set<number>>(new Set())
 const crawlProgress = ref('')
+
+onMounted(async () => {
+  try {
+    sites.value = await invokeListSites()
+  } catch {
+    // sites.json not found or invalid — user can still type manually
+  }
+})
+
+function onSiteChange(key: string) {
+  siteKey.value = key
+  const site = sites.value.find((s) => s.key === key)
+  if (site && !urlInput.value) {
+    urlInput.value = `https://${site.page_domain}/video-list/tag/`
+  }
+}
 
 const pageSize = 50
 const currentPage = ref(1)
@@ -194,13 +217,22 @@ function formatDate(d?: string): string {
 
     <div class="input-section">
       <div class="input-row">
-        <el-input
+        <el-select
           v-model="siteKey"
-          placeholder="站点 Key（见 sites.json）"
-          size="small"
+          placeholder="选择站点"
+          filterable
+          allow-create
           class="site-key-input"
           clearable
-        />
+          @change="onSiteChange"
+        >
+          <el-option
+            v-for="s in sites"
+            :key="s.key"
+            :label="`${s.key} (${s.page_domain})`"
+            :value="s.key"
+          />
+        </el-select>
       </div>
       <div class="input-row">
         <el-input

@@ -27,7 +27,7 @@ pub(crate) struct SiteEntry {
 }
 
 /// Load site configs from sites.json. Panics if file is missing or invalid.
-static SITES: LazyLock<HashMap<String, SiteEntry>> = LazyLock::new(|| {
+pub(crate) static SITES: LazyLock<HashMap<String, SiteEntry>> = LazyLock::new(|| {
     let config_path = std::path::Path::new("sites.json");
     let content = std::fs::read_to_string(config_path)
         .expect("sites.json not found. Copy sites.example.json to sites.json and fill in values.");

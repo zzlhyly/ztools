@@ -276,6 +276,25 @@ async fn cancel_download(task_id: String, state: State<'_, DownloadState>) -> Re
     Ok(())
 }
 
+/// List all available site keys and their page domains from sites.json.
+#[derive(Debug, Serialize)]
+struct SiteInfo {
+    key: String,
+    page_domain: String,
+}
+
+#[tauri::command]
+fn list_sites() -> Vec<SiteInfo> {
+    let sites = &*crate::fernet::SITES;
+    sites
+        .iter()
+        .map(|(k, v)| SiteInfo {
+            key: k.clone(),
+            page_domain: v.page_domain.clone(),
+        })
+        .collect()
+}
+
 /// Decrypt a Fernet-encrypted CONFIG token.
 #[tauri::command]
 fn decrypt_fernet_config(token: String, site_key: String) -> Result<String, AppError> {
@@ -645,6 +664,7 @@ pub fn run() {
             detect_encoding,
             convert_encoding,
             decrypt_fernet_config,
+            list_sites,
             extract_config_from_page,
             crawl_video_detail,
             crawl_video_from_url,
