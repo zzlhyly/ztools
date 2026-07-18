@@ -146,8 +146,8 @@ pub fn decrypt_fernet(key_b64: &str, token_b64: &str) -> Result<Vec<u8>, String>
         return Err(format!("Key must be 32 bytes, got {}", key_bytes.len()));
     }
 
-    let signing_key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, &key_bytes[16..]);
-    let encryption_key = &key_bytes[..16];
+    let signing_key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, &key_bytes[..16]);
+    let encryption_key = &key_bytes[16..];
 
     // Decode the token
     let token_bytes = URL_SAFE
