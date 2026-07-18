@@ -32,15 +32,28 @@ pub(crate) struct SiteEntry {
 /// Load site configs from sites.json. Re-reads file on every call.
 pub(crate) fn load_sites() -> HashMap<String, SiteEntry> {
     let config_path = std::path::Path::new("sites.json");
-    match std::fs::read_to_string(config_path) {
+    let abs = std::env::current_dir()
+        .map(|d| d.join(config_path))
+        .unwrap_or_else(|_| config_path.to_path_buf());
+    match std::fs::read_to_string(&abs) {
         Ok(content) => match serde_json::from_str::<SitesConfig>(&content) {
-            Ok(config) => config.sites,
+            Ok(config) => {
+                eprintln!(
+                    "[ztools] Loaded {} sites from {}",
+                    config.sites.len(),
+                    abs.display()
+                );
+                config.sites
+            }
             Err(e) => {
-                eprintln!("[ztools] Failed to parse sites.json: {}", e);
+                eprintln!("[ztools] Failed to parse {}: {}", abs.display(), e);
                 HashMap::new()
             }
         },
-        Err(_) => HashMap::new(),
+        Err(e) => {
+            eprintln!("[ztools] Failed to read {}: {}", abs.display(), e);
+            HashMap::new()
+        }
     }
 }
 
