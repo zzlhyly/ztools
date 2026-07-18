@@ -287,7 +287,7 @@ pub async fn fetch_video_list(
         .map_err(|e| format!("Failed to build client: {}", e))?;
 
     let url = format!(
-        "https://{}/api/vod/video?tag={}&channel_id={}&site_id={}",
+        "https://{}/api/vod/video?tag={}&channel_id={}&site_id={}&per_page=200",
         api_url, tag_id, channel_id, site_id
     );
 
