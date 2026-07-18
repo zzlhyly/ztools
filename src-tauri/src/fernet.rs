@@ -30,25 +30,32 @@ pub(crate) struct SiteEntry {
     pub(crate) origin: String,
 }
 
-/// Load site configs from sites.json. Panics if file is missing or invalid.
+/// Load site configs from sites.json. Returns empty map if file is missing.
 pub(crate) static SITES: LazyLock<HashMap<String, SiteEntry>> = LazyLock::new(|| {
     let config_path = std::path::Path::new("sites.json");
-    let content = std::fs::read_to_string(config_path)
-        .expect("sites.json not found. Copy sites.example.json to sites.json and fill in values.");
-    let config: SitesConfig = serde_json::from_str(&content).expect("Invalid sites.json format");
-    config.sites
+    match std::fs::read_to_string(config_path) {
+        Ok(content) => match serde_json::from_str::<SitesConfig>(&content) {
+            Ok(config) => config.sites,
+            Err(e) => {
+                eprintln!("[ztools] Failed to parse sites.json: {}", e);
+                HashMap::new()
+            }
+        },
+        Err(_) => {
+            eprintln!("[ztools] sites.json not found. Copy sites.example.json to sites.json and fill in values.");
+            HashMap::new()
+        }
+    }
 });
 
 /// Get the site entry for a given site key.
-pub(crate) fn get_site(key: &str) -> &SiteEntry {
-    SITES
-        .get(key)
-        .unwrap_or_else(|| panic!("Site '{}' not found in sites.json", key))
+pub(crate) fn get_site(key: &str) -> Option<&SiteEntry> {
+    SITES.get(key)
 }
 
 /// Get the Fernet key for a site.
-pub fn fernet_key_for(site_key: &str) -> &str {
-    &get_site(site_key).fernet_key
+pub fn fernet_key_for(site_key: &str) -> Option<&str> {
+    get_site(site_key).map(|s| s.fernet_key.as_str())
 }
 
 /// Site-level configuration extracted from page CONFIG.
@@ -161,7 +168,8 @@ pub fn decrypt_fernet(key_b64: &str, token_b64: &str) -> Result<Vec<u8>, String>
 
 /// Extract and decrypt the site CONFIG from a page HTML.
 pub fn extract_site_config(html: &str, site_key: &str) -> Result<SiteConfig, String> {
-    let key = fernet_key_for(site_key);
+    let key = fernet_key_for(site_key)
+        .ok_or_else(|| format!("Site '{}' not found in sites.json", site_key))?;
     let re = Regex::new(r"window\.CONFIG\s*=\s*'([^']+)'").unwrap();
     let caps = re
         .captures(html)
@@ -180,7 +188,7 @@ pub async fn fetch_video_detail(
     channel_id: u32,
     video_id: u64,
 ) -> Result<VideoInfo, String> {
-    let site = get_site(site_key);
+    let site = get_site(site_key).ok_or_else(|| format!("Site '{}' not found", site_key))?;
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
@@ -254,7 +262,7 @@ pub async fn fetch_video_list(
     channel_id: u32,
     tag_id: u32,
 ) -> Result<Vec<VideoListItem>, String> {
-    let site = get_site(site_key);
+    let site = get_site(site_key).ok_or_else(|| format!("Site '{}' not found", site_key))?;
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;

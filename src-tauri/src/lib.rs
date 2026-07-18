@@ -302,7 +302,8 @@ fn list_sites() -> Vec<SiteInfo> {
 /// Decrypt a Fernet-encrypted CONFIG token.
 #[tauri::command]
 fn decrypt_fernet_config(token: String, site_key: String) -> Result<String, AppError> {
-    let key = crate::fernet::fernet_key_for(&site_key);
+    let key = crate::fernet::fernet_key_for(&site_key)
+        .ok_or_else(|| AppError::Unknown(format!("Site '{}' not found", site_key)))?;
     let bytes = crate::fernet::decrypt_fernet(key, &token).map_err(AppError::Unknown)?;
     String::from_utf8(bytes).map_err(|e| AppError::Unknown(e.to_string()))
 }
@@ -342,7 +343,8 @@ async fn crawl_video_from_url(
     video_id: u64,
     site_key: String,
 ) -> Result<CrawlResult, AppError> {
-    let site = crate::fernet::get_site(&site_key);
+    let site = crate::fernet::get_site(&site_key)
+        .ok_or_else(|| AppError::Unknown(format!("Site '{}' not found", site_key)))?;
     let client = reqwest::Client::builder()
         .build()
         .map_err(|e| AppError::Unknown(e.to_string()))?;
@@ -410,7 +412,8 @@ async fn crawl_list_from_url(
     tag_id: u32,
     site_key: String,
 ) -> Result<Vec<crate::fernet::VideoListItem>, AppError> {
-    let site = crate::fernet::get_site(&site_key);
+    let site = crate::fernet::get_site(&site_key)
+        .ok_or_else(|| AppError::Unknown(format!("Site '{}' not found", site_key)))?;
 
     let client = reqwest::Client::builder()
         .build()
