@@ -28,6 +28,7 @@ import {
   Ticket,
   Image as ImageIcon,
   FileText,
+  Globe,
   ChevronLeft,
   ChevronRight,
   Search,
@@ -70,6 +71,7 @@ const tools: ToolItem[] = [
   { path: '/jwt', icon: Ticket, key: 'jwt' },
   { path: '/image', icon: ImageIcon, key: 'image' },
   { path: '/encoding', icon: FileText, key: 'encoding' },
+  { path: '/crawler', icon: Globe, key: 'siteCrawler' },
 ]
 
 const searchQuery = ref('')

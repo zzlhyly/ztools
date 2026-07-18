@@ -1,3 +1,4 @@
+mod fernet;
 mod m3u8;
 
 use m3u8::playlist;
@@ -275,6 +276,98 @@ async fn cancel_download(task_id: String, state: State<'_, DownloadState>) -> Re
     Ok(())
 }
 
+/// Decrypt a Fernet-encrypted CONFIG token.
+#[tauri::command]
+fn decrypt_fernet_config(token: String, site_key: String) -> Result<String, AppError> {
+    let key = crate::fernet::fernet_key_for(&site_key);
+    let bytes = crate::fernet::decrypt_fernet(key, &token).map_err(AppError::Unknown)?;
+    String::from_utf8(bytes).map_err(|e| AppError::Unknown(e.to_string()))
+}
+
+/// Extract and decrypt site config from a page's HTML.
+#[tauri::command]
+fn extract_config_from_page(
+    html: String,
+    site_key: String,
+) -> Result<crate::fernet::SiteConfig, AppError> {
+    crate::fernet::extract_site_config(&html, &site_key).map_err(AppError::Unknown)
+}
+
+/// Fetch video detail from the site API and return M3U8 info.
+#[derive(Debug, Serialize)]
+struct CrawlResult {
+    video_id: u64,
+    title: String,
+    m3u8_url: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    duration: Option<u64>,
+}
+
+#[tauri::command]
+async fn crawl_video_detail(
+    html: String,
+    video_id: u64,
+    site_key: String,
+) -> Result<CrawlResult, AppError> {
+    let config = crate::fernet::extract_site_config(&html, &site_key).map_err(AppError::Unknown)?;
+    let api_url = config
+        .api_url
+        .ok_or_else(|| AppError::Unknown("No api_url in config".into()))?;
+    let site_id = config
+        .site_id
+        .ok_or_else(|| AppError::Unknown("No site_id in config".into()))?;
+    let channel_id = config
+        .channel_id
+        .ok_or_else(|| AppError::Unknown("No channel_id in config".into()))?;
+    let first_line = config
+        .video_play_url_list
+        .as_ref()
+        .and_then(|v| v.first())
+        .and_then(|l| l.url.as_ref())
+        .and_then(|u| u.first())
+        .ok_or_else(|| AppError::Unknown("No CDN domain in config".into()))?;
+
+    let video =
+        crate::fernet::fetch_video_detail(&site_key, &api_url, site_id, channel_id, video_id)
+            .await
+            .map_err(AppError::Unknown)?;
+
+    let play_url = video
+        .play_url
+        .ok_or_else(|| AppError::Unknown("No play_url in video data".into()))?;
+    let m3u8_url = crate::fernet::build_m3u8_url(first_line, &play_url);
+
+    Ok(CrawlResult {
+        video_id,
+        title: video.name.unwrap_or_default(),
+        m3u8_url,
+        duration: video.duration,
+    })
+}
+
+/// Crawl the video list from a tag page.
+#[tauri::command]
+async fn crawl_list_page(
+    html: String,
+    tag_id: u32,
+    site_key: String,
+) -> Result<Vec<crate::fernet::VideoListItem>, AppError> {
+    let config = crate::fernet::extract_site_config(&html, &site_key).map_err(AppError::Unknown)?;
+    let api_url = config
+        .api_url
+        .ok_or_else(|| AppError::Unknown("No api_url in config".into()))?;
+    let site_id = config
+        .site_id
+        .ok_or_else(|| AppError::Unknown("No site_id in config".into()))?;
+    let channel_id = config
+        .channel_id
+        .ok_or_else(|| AppError::Unknown("No channel_id in config".into()))?;
+
+    crate::fernet::fetch_video_list(&site_key, &api_url, site_id, channel_id, tag_id)
+        .await
+        .map_err(AppError::Unknown)
+}
+
 /// Hash a file with the specified algorithm using ring (SHA-NI) for hardware acceleration.
 #[tracing::instrument]
 #[tauri::command]
@@ -472,6 +565,10 @@ pub fn run() {
             convert_image,
             detect_encoding,
             convert_encoding,
+            decrypt_fernet_config,
+            extract_config_from_page,
+            crawl_video_detail,
+            crawl_list_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

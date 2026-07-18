@@ -1,0 +1,9 @@
+{
+  "example_site": {
+    "fernet_key": "your_fernet_key_here",
+    "api_base": "api.example.com",
+    "page_domain": "www.example.com",
+    "referer": "https://www.example.com/",
+    "origin": "https://www.example.com"
+  }
+}

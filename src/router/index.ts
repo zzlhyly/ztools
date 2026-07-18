@@ -26,6 +26,7 @@ const routes = [
   { path: '/jwt', component: () => import('@/tools/JwtDebugger.vue') },
   { path: '/image', component: () => import('@/tools/ImageConverter.vue') },
   { path: '/encoding', component: () => import('@/tools/EncodingConverter.vue') },
+  { path: '/crawler', component: () => import('@/tools/SiteCrawler.vue') },
 ]
 
 const router = createRouter({

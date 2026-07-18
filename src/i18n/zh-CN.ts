@@ -104,10 +104,15 @@ export default {
       name: '编码转换器',
       description: '检测和转换文本文件编码',
     },
+    siteCrawler: {
+      name: '站点爬取',
+      description: '爬取视频站点列表并批量下载',
+    },
   },
   common: {
     input: '输入',
     output: '输出',
+    parse: '解析',
     format: '格式化',
     minify: '压缩',
     encode: '编码',

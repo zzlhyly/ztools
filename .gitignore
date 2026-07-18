@@ -23,7 +23,8 @@ dist-ssr
 *.sln
 *.sw?
 
-# Superpowers brainstorm
+# Site config (contains secrets)
+sites.json
 .superpowers/
 
 # Ultrawork notepad

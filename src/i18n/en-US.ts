@@ -104,10 +104,15 @@ export default {
       name: 'Encoding Converter',
       description: 'Detect and convert text file encodings',
     },
+    siteCrawler: {
+      name: 'Site Crawler',
+      description: 'Crawl video sites and batch download',
+    },
   },
   common: {
     input: 'Input',
     output: 'Output',
+    parse: 'Parse',
     format: 'Format',
     minify: 'Minify',
     encode: 'Encode',
