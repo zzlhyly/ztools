@@ -287,9 +287,8 @@ struct SiteInfo {
 
 #[tauri::command]
 fn list_sites() -> Vec<SiteInfo> {
-    let sites = &*crate::fernet::SITES;
-    sites
-        .iter()
+    crate::fernet::load_sites()
+        .into_iter()
         .map(|(k, v)| SiteInfo {
             key: k.clone(),
             page_domain: v.page_domain.clone(),
@@ -304,7 +303,7 @@ fn list_sites() -> Vec<SiteInfo> {
 fn decrypt_fernet_config(token: String, site_key: String) -> Result<String, AppError> {
     let key = crate::fernet::fernet_key_for(&site_key)
         .ok_or_else(|| AppError::Unknown(format!("Site '{}' not found", site_key)))?;
-    let bytes = crate::fernet::decrypt_fernet(key, &token).map_err(AppError::Unknown)?;
+    let bytes = crate::fernet::decrypt_fernet(&key, &token).map_err(AppError::Unknown)?;
     String::from_utf8(bytes).map_err(|e| AppError::Unknown(e.to_string()))
 }
 

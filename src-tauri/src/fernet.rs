@@ -7,7 +7,6 @@ use regex::Regex;
 use ring::hmac;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::LazyLock;
 
 /// External site configuration loaded from sites.json.
 #[derive(Debug, Clone, Deserialize)]
@@ -30,8 +29,8 @@ pub(crate) struct SiteEntry {
     pub(crate) origin: String,
 }
 
-/// Load site configs from sites.json. Returns empty map if file is missing.
-pub(crate) static SITES: LazyLock<HashMap<String, SiteEntry>> = LazyLock::new(|| {
+/// Load site configs from sites.json. Re-reads file on every call.
+pub(crate) fn load_sites() -> HashMap<String, SiteEntry> {
     let config_path = std::path::Path::new("sites.json");
     match std::fs::read_to_string(config_path) {
         Ok(content) => match serde_json::from_str::<SitesConfig>(&content) {
@@ -41,21 +40,18 @@ pub(crate) static SITES: LazyLock<HashMap<String, SiteEntry>> = LazyLock::new(||
                 HashMap::new()
             }
         },
-        Err(_) => {
-            eprintln!("[ztools] sites.json not found. Copy sites.example.json to sites.json and fill in values.");
-            HashMap::new()
-        }
+        Err(_) => HashMap::new(),
     }
-});
+}
 
 /// Get the site entry for a given site key.
-pub(crate) fn get_site(key: &str) -> Option<&SiteEntry> {
-    SITES.get(key)
+pub(crate) fn get_site(key: &str) -> Option<SiteEntry> {
+    load_sites().remove(key)
 }
 
 /// Get the Fernet key for a site.
-pub fn fernet_key_for(site_key: &str) -> Option<&str> {
-    get_site(site_key).map(|s| s.fernet_key.as_str())
+pub fn fernet_key_for(site_key: &str) -> Option<String> {
+    get_site(site_key).map(|s| s.fernet_key)
 }
 
 /// Site-level configuration extracted from page CONFIG.
@@ -175,7 +171,7 @@ pub fn extract_site_config(html: &str, site_key: &str) -> Result<SiteConfig, Str
         .captures(html)
         .ok_or_else(|| "No window.CONFIG found in page".to_string())?;
     let token = caps.get(1).unwrap().as_str();
-    let json = decrypt_fernet(key, token)?;
+    let json = decrypt_fernet(&key, token)?;
     serde_json::from_slice::<SiteConfig>(&json)
         .map_err(|e| format!("Failed to parse site config: {}", e))
 }
