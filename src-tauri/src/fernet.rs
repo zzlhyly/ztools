@@ -4,7 +4,6 @@ use base64::Engine;
 use cbc::cipher::block_padding::Pkcs7;
 use cbc::cipher::{BlockDecryptMut, KeyIvInit};
 use regex::Regex;
-use ring::hmac;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -15,7 +14,7 @@ struct SitesConfig {
     sites: HashMap<String, SiteEntry>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[allow(dead_code)]
 pub(crate) struct SiteEntry {
     pub(crate) fernet_key: String,
@@ -29,32 +28,45 @@ pub(crate) struct SiteEntry {
     pub(crate) origin: String,
 }
 
-/// Load site configs from sites.json. Re-reads file on every call.
+/// Load site configs from sites.json.
+/// Tries CWD first, then parent directory (project root).
 pub(crate) fn load_sites() -> HashMap<String, SiteEntry> {
-    let config_path = std::path::Path::new("sites.json");
-    let abs = std::env::current_dir()
-        .map(|d| d.join(config_path))
-        .unwrap_or_else(|_| config_path.to_path_buf());
-    match std::fs::read_to_string(&abs) {
-        Ok(content) => match serde_json::from_str::<SitesConfig>(&content) {
-            Ok(config) => {
-                eprintln!(
-                    "[ztools] Loaded {} sites from {}",
-                    config.sites.len(),
-                    abs.display()
-                );
-                config.sites
-            }
-            Err(e) => {
-                eprintln!("[ztools] Failed to parse {}: {}", abs.display(), e);
-                HashMap::new()
-            }
-        },
-        Err(e) => {
-            eprintln!("[ztools] Failed to read {}: {}", abs.display(), e);
-            HashMap::new()
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let candidates = [
+        cwd.join("sites.json"),
+        cwd.parent()
+            .map(|p| p.join("sites.json"))
+            .unwrap_or_default(),
+    ];
+
+    for config_path in &candidates {
+        match std::fs::read_to_string(config_path) {
+            Ok(content) => match serde_json::from_str::<SitesConfig>(&content) {
+                Ok(config) => {
+                    eprintln!(
+                        "[ztools] Loaded {} sites from {}",
+                        config.sites.len(),
+                        config_path.display()
+                    );
+                    return config.sites;
+                }
+                Err(e) => {
+                    eprintln!("[ztools] Failed to parse {}: {}", config_path.display(), e);
+                    return HashMap::new();
+                }
+            },
+            Err(_) => continue,
         }
     }
+
+    eprintln!(
+        "[ztools] sites.json not found. Tried: {:?}",
+        candidates
+            .iter()
+            .map(|p| p.display().to_string())
+            .collect::<Vec<_>>()
+    );
+    HashMap::new()
 }
 
 /// Get the site entry for a given site key.
@@ -134,7 +146,7 @@ pub fn decrypt_fernet(key_b64: &str, token_b64: &str) -> Result<Vec<u8>, String>
         return Err(format!("Key must be 32 bytes, got {}", key_bytes.len()));
     }
 
-    let signing_key = hmac::Key::new(hmac::HMAC_SHA256, &key_bytes[16..]);
+    let signing_key = ring::hmac::Key::new(ring::hmac::HMAC_SHA256, &key_bytes[16..]);
     let encryption_key = &key_bytes[..16];
 
     // Decode the token
@@ -143,7 +155,6 @@ pub fn decrypt_fernet(key_b64: &str, token_b64: &str) -> Result<Vec<u8>, String>
         .map_err(|e| format!("Invalid token: {}", e))?;
 
     if token_bytes.len() < 57 {
-        // 1 (version) + 8 (timestamp) + 16 (IV) + min 0 (ciphertext) + 32 (HMAC)
         return Err("Token too short".to_string());
     }
 
@@ -153,10 +164,9 @@ pub fn decrypt_fernet(key_b64: &str, token_b64: &str) -> Result<Vec<u8>, String>
     let hmac_value = &token_bytes[hmac_start..];
     let signed_data = &token_bytes[..hmac_start];
 
-    hmac::verify(&signing_key, signed_data, hmac_value)
+    ring::hmac::verify(&signing_key, signed_data, hmac_value)
         .map_err(|_| "HMAC verification failed".to_string())?;
 
-    // Check version
     if token_bytes[0] != 0x80 {
         return Err(format!("Unsupported version: {}", token_bytes[0]));
     }
@@ -311,8 +321,7 @@ mod tests {
 
     #[test]
     fn test_decrypt_key_length() {
-        // Fernet key must be 32 bytes URL-safe base64 encoded
-        let key = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZab"; // 64 chars = junk, just test decode
+        let key = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZab";
         let result = URL_SAFE.decode(key);
         assert!(result.is_ok());
     }
