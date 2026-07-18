@@ -55,3 +55,19 @@ export async function invokeCrawlListPage(
 ): Promise<VideoListItem[]> {
   return invoke<VideoListItem[]>('crawl_list_page', { html, tagId, siteKey })
 }
+
+export async function invokeCrawlListFromUrl(
+  url: string,
+  tagId: number,
+  siteKey: string,
+): Promise<VideoListItem[]> {
+  return invoke<VideoListItem[]>('crawl_list_from_url', { url, tagId, siteKey })
+}
+
+export async function invokeCrawlVideoFromUrl(
+  pageUrl: string,
+  videoId: number,
+  siteKey: string,
+): Promise<CrawlResult> {
+  return invoke<CrawlResult>('crawl_video_from_url', { pageUrl, videoId, siteKey })
+}

@@ -3,13 +3,8 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 import { useM3u8Store } from '@/stores/m3u8'
-import {
-  invokeFetchPage,
-  invokeParseM3u8,
-  invokeStartDownload,
-  type DownloadConfig,
-} from '@/utils/m3u8'
-import { invokeCrawlListPage, invokeCrawlVideoDetail, type VideoListItem } from '@/utils/site'
+import { invokeParseM3u8, invokeStartDownload, type DownloadConfig } from '@/utils/m3u8'
+import { invokeCrawlListFromUrl, invokeCrawlVideoFromUrl, type VideoListItem } from '@/utils/site'
 import { Search, Download } from 'lucide-vue-next'
 
 const { t } = useI18n()
@@ -22,7 +17,6 @@ const crawling = ref(false)
 const videos = ref<VideoListItem[]>([])
 const selectedIds = ref<Set<number>>(new Set())
 const crawlProgress = ref('')
-const pageHtml = ref('')
 
 const pageSize = 50
 const currentPage = ref(1)
@@ -66,12 +60,9 @@ async function handleParseList() {
 
   loading.value = true
   videos.value = []
-  pageHtml.value = ''
 
   try {
-    const pageResult = await invokeFetchPage(url, {})
-    pageHtml.value = pageResult.html
-    const list = await invokeCrawlListPage(pageHtml.value, tagId, siteKey.value)
+    const list = await invokeCrawlListFromUrl(url, tagId, siteKey.value)
     videos.value = list
     selectedIds.value = new Set()
     currentPage.value = 1
@@ -83,12 +74,23 @@ async function handleParseList() {
   }
 }
 
+function getBaseUrl(url: string): string {
+  try {
+    const u = new URL(url)
+    return `${u.protocol}//${u.host}`
+  } catch {
+    return ''
+  }
+}
+
 async function handleCrawlSingle(videoId: number) {
-  if (!pageHtml.value) return
+  const baseUrl = getBaseUrl(urlInput.value)
+  if (!baseUrl) return
 
   try {
     crawlProgress.value = `正在获取 #${videoId}...`
-    const result = await invokeCrawlVideoDetail(pageHtml.value, videoId, siteKey.value)
+    const pageUrl = `${baseUrl}/video-details/${videoId}`
+    const result = await invokeCrawlVideoFromUrl(pageUrl, videoId, siteKey.value)
 
     crawlProgress.value = `解析 #${videoId}...`
     const parseResult = await invokeParseM3u8(result.m3u8_url, {})

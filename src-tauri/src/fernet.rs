@@ -19,11 +19,11 @@ struct SitesConfig {
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 pub(crate) struct SiteEntry {
-    fernet_key: String,
-    api_base: String,
-    page_domain: String,
-    referer: String,
-    origin: String,
+    pub(crate) fernet_key: String,
+    pub(crate) api_base: String,
+    pub(crate) page_domain: String,
+    pub(crate) referer: String,
+    pub(crate) origin: String,
 }
 
 /// Load site configs from sites.json. Panics if file is missing or invalid.

@@ -309,7 +309,42 @@ async fn crawl_video_detail(
     video_id: u64,
     site_key: String,
 ) -> Result<CrawlResult, AppError> {
-    let config = crate::fernet::extract_site_config(&html, &site_key).map_err(AppError::Unknown)?;
+    crawl_video_detail_inner(&html, video_id, &site_key).await
+}
+
+/// Fetch video detail by first fetching the detail page, then calling the API.
+#[tauri::command]
+async fn crawl_video_from_url(
+    page_url: String,
+    video_id: u64,
+    site_key: String,
+) -> Result<CrawlResult, AppError> {
+    let site = crate::fernet::get_site(&site_key);
+    let client = reqwest::Client::builder()
+        .build()
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
+    let response = client
+        .get(&page_url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36")
+        .header("Referer", &site.referer)
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .header("Accept-Language", "zh-CN,zh;q=0.9")
+        .send()
+        .await
+        .map_err(|e| AppError::Unknown(format!("Failed to fetch page: {}", e)))?;
+    let html = response
+        .text()
+        .await
+        .map_err(|e| AppError::Unknown(format!("Failed to read page: {}", e)))?;
+    crawl_video_detail_inner(&html, video_id, &site_key).await
+}
+
+async fn crawl_video_detail_inner(
+    html: &str,
+    video_id: u64,
+    site_key: &str,
+) -> Result<CrawlResult, AppError> {
+    let config = crate::fernet::extract_site_config(html, site_key).map_err(AppError::Unknown)?;
     let api_url = config
         .api_url
         .ok_or_else(|| AppError::Unknown("No api_url in config".into()))?;
@@ -328,7 +363,7 @@ async fn crawl_video_detail(
         .ok_or_else(|| AppError::Unknown("No CDN domain in config".into()))?;
 
     let video =
-        crate::fernet::fetch_video_detail(&site_key, &api_url, site_id, channel_id, video_id)
+        crate::fernet::fetch_video_detail(site_key, &api_url, site_id, channel_id, video_id)
             .await
             .map_err(AppError::Unknown)?;
 
@@ -345,7 +380,51 @@ async fn crawl_video_detail(
     })
 }
 
-/// Crawl the video list from a tag page.
+/// Crawl the video list directly from a URL (fetches page + parses + calls API).
+#[tauri::command]
+async fn crawl_list_from_url(
+    url: String,
+    tag_id: u32,
+    site_key: String,
+) -> Result<Vec<crate::fernet::VideoListItem>, AppError> {
+    let site = crate::fernet::get_site(&site_key);
+
+    let client = reqwest::Client::builder()
+        .build()
+        .map_err(|e| AppError::Unknown(e.to_string()))?;
+
+    let response = client
+        .get(&url)
+        .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36")
+        .header("Referer", &site.referer)
+        .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+        .header("Accept-Language", "zh-CN,zh;q=0.9")
+        .send()
+        .await
+        .map_err(|e| AppError::Unknown(format!("Failed to fetch page: {}", e)))?;
+
+    let html = response
+        .text()
+        .await
+        .map_err(|e| AppError::Unknown(format!("Failed to read page: {}", e)))?;
+
+    let config = crate::fernet::extract_site_config(&html, &site_key).map_err(AppError::Unknown)?;
+    let api_url = config
+        .api_url
+        .ok_or_else(|| AppError::Unknown("No api_url in config".into()))?;
+    let site_id = config
+        .site_id
+        .ok_or_else(|| AppError::Unknown("No site_id in config".into()))?;
+    let channel_id = config
+        .channel_id
+        .ok_or_else(|| AppError::Unknown("No channel_id in config".into()))?;
+
+    crate::fernet::fetch_video_list(&site_key, &api_url, site_id, channel_id, tag_id)
+        .await
+        .map_err(AppError::Unknown)
+}
+
+/// Crawl the video list from a tag page (HTML already fetched).
 #[tauri::command]
 async fn crawl_list_page(
     html: String,
@@ -568,7 +647,9 @@ pub fn run() {
             decrypt_fernet_config,
             extract_config_from_page,
             crawl_video_detail,
+            crawl_video_from_url,
             crawl_list_page,
+            crawl_list_from_url,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
