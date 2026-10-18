@@ -57,7 +57,6 @@ export async function invokeFetchPage(
 export interface M3u8Info {
   url: string
   label: string
-  qualities: M3u8QualityOption[]
 }
 
 export async function invokeParseM3u8Urls(html: string, baseUrl: string): Promise<M3u8Info[]> {

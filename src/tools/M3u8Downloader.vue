@@ -283,7 +283,7 @@ async function startFromWebpage(url: string, headers: Record<string, string>) {
     store.updateTask(task.id, {
       m3u8Url: firstM3u8.url,
       title: firstM3u8.label || extractFilename(url),
-      quality: firstM3u8.qualities[0]?.resolution || 'auto',
+      quality: 'auto',
     })
 
     await doStartDownload(task, firstM3u8.url, store.config.downloadDir)
