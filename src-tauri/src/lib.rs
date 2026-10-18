@@ -4,7 +4,7 @@ mod m3u8;
 use m3u8::playlist;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::State;
 use tracing::{debug, error, info};
 
@@ -67,13 +67,13 @@ impl AppError {
 }
 
 pub struct DownloadState {
-    pub active_downloads: Mutex<HashMap<String, bool>>,
+    pub active_downloads: Arc<Mutex<HashMap<String, bool>>>,
 }
 
 impl DownloadState {
     pub fn new() -> Self {
         Self {
-            active_downloads: Mutex::new(HashMap::new()),
+            active_downloads: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 }
@@ -90,7 +90,7 @@ pub struct FetchPageResult {
     final_url: String,
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(headers))]
 #[tauri::command]
 async fn fetch_page(
     url: String,
@@ -140,7 +140,7 @@ pub struct ParseM3u8Result {
     has_encryption: bool,
 }
 
-#[tracing::instrument]
+#[tracing::instrument(skip(headers))]
 #[tauri::command]
 async fn parse_m3u8(
     url: String,
@@ -240,10 +240,17 @@ async fn start_download(
 
     let task_id_clone = config.task_id.clone();
     let app_handle_clone = app_handle.clone();
+    let cancel_flags = state.active_downloads.clone();
 
     // Spawn async download in background
     tauri::async_runtime::spawn(async move {
-        let result = m3u8::downloader::run_download(&config, &app_handle_clone).await;
+        let result =
+            m3u8::downloader::run_download(&config, &app_handle_clone, cancel_flags.clone()).await;
+
+        // 下载结束后从状态表移除任务条目
+        if let Ok(mut active) = cancel_flags.lock() {
+            active.remove(&task_id_clone);
+        }
 
         if let Err(e) = result {
             error!("Download failed: task_id={}, error={}", task_id_clone, e);
@@ -345,6 +352,8 @@ async fn crawl_video_from_url(
     let site = crate::fernet::get_site(&site_key)
         .ok_or_else(|| AppError::Unknown(format!("Site '{}' not found", site_key)))?;
     let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| AppError::Unknown(e.to_string()))?;
     let response = client
@@ -415,6 +424,8 @@ async fn crawl_list_from_url(
         .ok_or_else(|| AppError::Unknown(format!("Site '{}' not found", site_key)))?;
 
     let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| AppError::Unknown(e.to_string()))?;
 
@@ -553,92 +564,166 @@ fn get_default_download_dir() -> String {
 
 #[tauri::command]
 async fn check_ffmpeg(ffmpeg_path: String) -> Result<bool, AppError> {
-    let output = std::process::Command::new(&ffmpeg_path)
+    let fut = tokio::process::Command::new(&ffmpeg_path)
         .arg("-version")
+        .stdin(std::process::Stdio::null())
+        .stdout(std::process::Stdio::piped())
+        .stderr(std::process::Stdio::piped())
         .output();
-    Ok(output.is_ok())
+    match tokio::time::timeout(std::time::Duration::from_secs(10), fut).await {
+        // 校验 stdout 中的版本串，避免任意可执行文件通过检查
+        Ok(Ok(output)) => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            Ok(output.status.success() && stdout.contains("ffmpeg version"))
+        }
+        // 进程无法启动或超时（例如路径指向了 GUI 程序）
+        Ok(Err(_)) => Ok(false),
+        Err(_) => Ok(false),
+    }
+}
+
+/// Merge TS segment files in a directory into a single MP4 file using ffmpeg.
+#[tauri::command]
+async fn merge_ts(dir: String, ffmpeg_path: String) -> Result<String, AppError> {
+    let dir_path = std::path::PathBuf::from(&dir);
+    if !dir_path.is_dir() {
+        return Err(AppError::InvalidInput(format!(
+            "TS directory does not exist: {}",
+            dir
+        )));
+    }
+
+    let dir_name = dir_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .ok_or_else(|| AppError::InvalidInput(format!("Invalid directory: {}", dir)))?;
+    let output_path = dir_path
+        .parent()
+        .map(|p| p.join(format!("{}.mp4", dir_name)))
+        .ok_or_else(|| AppError::InvalidInput(format!("Invalid directory: {}", dir)))?;
+
+    info!(
+        "Merging TS files: dir={}, output={}",
+        dir,
+        output_path.display()
+    );
+
+    let conv_dir = dir_path.clone();
+    let conv_output = output_path.clone();
+    tokio::task::spawn_blocking(move || {
+        m3u8::converter::convert_to_mp4(&conv_dir, &conv_output, &ffmpeg_path)
+    })
+    .await
+    .map_err(|e| AppError::Unknown(format!("Merge task panicked: {}", e)))?
+    .map_err(AppError::Ffmpeg)?;
+
+    Ok(output_path.to_string_lossy().to_string())
 }
 
 /// Convert an image file between formats using the `image` crate.
 #[tauri::command]
-fn convert_image(input_path: String, output_format: String) -> Result<serde_json::Value, AppError> {
-    use image::GenericImageView;
-    let img = image::open(&input_path)
-        .map_err(|e| AppError::Parse(format!("Failed to open image: {}", e)))?;
-    let (w, h) = img.dimensions();
-    let original_size = std::fs::metadata(&input_path)
-        .map_err(|e| AppError::io(e, &input_path))?
-        .len();
+async fn convert_image(
+    input_path: String,
+    output_format: String,
+) -> Result<serde_json::Value, AppError> {
+    tokio::task::spawn_blocking(move || {
+        use image::GenericImageView;
+        let img = image::open(&input_path)
+            .map_err(|e| AppError::Parse(format!("Failed to open image: {}", e)))?;
+        let (w, h) = img.dimensions();
+        let original_size = std::fs::metadata(&input_path)
+            .map_err(|e| AppError::io(e, &input_path))?
+            .len();
 
-    let output_path =
-        std::env::temp_dir().join(format!("ztools_output.{}", output_format.to_lowercase()));
+        let format = match output_format.to_lowercase().as_str() {
+            "jpeg" | "jpg" => image::ImageFormat::Jpeg,
+            "png" => image::ImageFormat::Png,
+            "webp" => image::ImageFormat::WebP,
+            _ => {
+                return Err(AppError::InvalidInput(format!(
+                    "Unsupported format: {}",
+                    output_format
+                )))
+            }
+        };
 
-    let format = match output_format.to_lowercase().as_str() {
-        "jpeg" | "jpg" => image::ImageFormat::Jpeg,
-        "png" => image::ImageFormat::Png,
-        "webp" => image::ImageFormat::WebP,
-        _ => {
-            return Err(AppError::InvalidInput(format!(
-                "Unsupported format: {}",
-                output_format
-            )))
-        }
-    };
+        // 文件名带 uuid，避免多次转换互相覆盖
+        let output_path = std::env::temp_dir().join(format!(
+            "ztools_image_{}.{}",
+            uuid::Uuid::new_v4(),
+            output_format.to_lowercase()
+        ));
 
-    img.save_with_format(&output_path, format)
-        .map_err(|e| AppError::Parse(format!("Failed to save image: {}", e)))?;
+        img.save_with_format(&output_path, format)
+            .map_err(|e| AppError::Parse(format!("Failed to save image: {}", e)))?;
 
-    let output_size = std::fs::metadata(&output_path)
-        .map_err(|e| AppError::io(e, &output_path.to_string_lossy()))?
-        .len();
+        let output_size = std::fs::metadata(&output_path)
+            .map_err(|e| AppError::io(e, &output_path.to_string_lossy()))?
+            .len();
 
-    Ok(serde_json::json!({
-        "output_path": output_path.to_string_lossy(),
-        "original_size": original_size,
-        "output_size": output_size,
-        "width": w,
-        "height": h,
-    }))
+        Ok(serde_json::json!({
+            "output_path": output_path.to_string_lossy(),
+            "original_size": original_size,
+            "output_size": output_size,
+            "width": w,
+            "height": h,
+        }))
+    })
+    .await
+    .map_err(|e| AppError::Unknown(format!("Convert task panicked: {}", e)))?
 }
 
-/// Detect the encoding of a text file (BOM-based + basic heuristic).
+/// Detect the encoding of a text file (BOM-based; treated as UTF-8 without BOM).
 #[tauri::command]
-fn detect_encoding(file_path: String) -> Result<serde_json::Value, AppError> {
-    let bytes = std::fs::read(&file_path).map_err(|e| AppError::io(e, &file_path))?;
-    let (encoding, confidence) =
-        encoding_rs::Encoding::for_bom(&bytes).unwrap_or((encoding_rs::UTF_8, 1));
-    Ok(serde_json::json!({
-        "encoding": encoding.name(),
-        "confidence": confidence,
-    }))
+async fn detect_encoding(file_path: String) -> Result<serde_json::Value, AppError> {
+    tokio::task::spawn_blocking(move || {
+        let bytes = std::fs::read(&file_path).map_err(|e| AppError::io(e, &file_path))?;
+        let (encoding, has_bom) = match encoding_rs::Encoding::for_bom(&bytes) {
+            Some((enc, _)) => (enc, true),
+            None => (encoding_rs::UTF_8, false),
+        };
+        Ok(serde_json::json!({
+            "encoding": encoding.name(),
+            "has_bom": has_bom,
+        }))
+    })
+    .await
+    .map_err(|e| AppError::Unknown(format!("Detect task panicked: {}", e)))?
 }
 
 /// Convert a text file from its detected encoding to a target encoding.
 #[tauri::command]
-fn convert_encoding(
+async fn convert_encoding(
     file_path: String,
     target_encoding: String,
 ) -> Result<serde_json::Value, AppError> {
-    let bytes = std::fs::read(&file_path).map_err(|e| AppError::io(e, &file_path))?;
-    let (source_encoding, _) =
-        encoding_rs::Encoding::for_bom(&bytes).unwrap_or((encoding_rs::UTF_8, 1));
-    let (decoded, _actual_encoding, had_errors) = source_encoding.decode(&bytes);
+    tokio::task::spawn_blocking(move || {
+        let bytes = std::fs::read(&file_path).map_err(|e| AppError::io(e, &file_path))?;
+        let source_encoding = encoding_rs::Encoding::for_bom(&bytes)
+            .map(|(enc, _)| enc)
+            .unwrap_or(encoding_rs::UTF_8);
+        let (decoded, _actual_encoding, had_errors) = source_encoding.decode(&bytes);
 
-    let target_enc =
-        encoding_rs::Encoding::for_label(target_encoding.as_bytes()).ok_or_else(|| {
-            AppError::InvalidInput(format!("Unsupported target encoding: {}", target_encoding))
-        })?;
-    let (encoded, _enc, _errors) = target_enc.encode(&decoded);
+        let target_enc =
+            encoding_rs::Encoding::for_label(target_encoding.as_bytes()).ok_or_else(|| {
+                AppError::InvalidInput(format!("Unsupported target encoding: {}", target_encoding))
+            })?;
+        let (encoded, _enc, _errors) = target_enc.encode(&decoded);
 
-    let output_path = std::env::temp_dir().join("ztools_encoding_output.txt");
-    std::fs::write(&output_path, &encoded)
-        .map_err(|e| AppError::io(e, &output_path.to_string_lossy()))?;
+        // 文件名带 uuid，避免并发转换互相覆盖
+        let output_path =
+            std::env::temp_dir().join(format!("ztools_encoding_{}.txt", uuid::Uuid::new_v4()));
+        std::fs::write(&output_path, &encoded)
+            .map_err(|e| AppError::io(e, &output_path.to_string_lossy()))?;
 
-    Ok(serde_json::json!({
-        "output_path": output_path.to_string_lossy(),
-        "source_encoding": source_encoding.name(),
-        "had_errors": had_errors,
-    }))
+        Ok(serde_json::json!({
+            "output_path": output_path.to_string_lossy(),
+            "source_encoding": source_encoding.name(),
+            "had_errors": had_errors,
+        }))
+    })
+    .await
+    .map_err(|e| AppError::Unknown(format!("Convert task panicked: {}", e)))?
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -664,6 +749,7 @@ pub fn run() {
             start_download,
             cancel_download,
             check_ffmpeg,
+            merge_ts,
             get_default_download_dir,
             hash_file,
             convert_image,
@@ -731,7 +817,11 @@ mod tests {
         let img = image::RgbImage::new(10, 10);
         img.save(&input_path).unwrap();
 
-        let result = convert_image(input_path.to_string_lossy().to_string(), "jpeg".to_string());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(convert_image(
+            input_path.to_string_lossy().to_string(),
+            "jpeg".to_string(),
+        ));
         assert!(result.is_ok());
 
         let val = result.unwrap();
@@ -757,17 +847,22 @@ mod tests {
         let img = image::RgbImage::new(1, 1);
         img.save(&input_path).unwrap();
 
-        let result = convert_image(input_path.to_string_lossy().to_string(), "gif".to_string());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(convert_image(
+            input_path.to_string_lossy().to_string(),
+            "gif".to_string(),
+        ));
         std::fs::remove_file(&input_path).ok();
         assert!(result.is_err());
     }
 
     #[test]
     fn test_convert_image_file_not_found() {
-        let result = convert_image(
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(convert_image(
             "/nonexistent/path/image.png".to_string(),
             "jpeg".to_string(),
-        );
+        ));
         assert!(result.is_err());
     }
 
@@ -782,13 +877,14 @@ mod tests {
         f.write_all(b"hello").unwrap();
         f.sync_all().unwrap();
 
-        let result = detect_encoding(tmp.to_string_lossy().to_string());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(detect_encoding(tmp.to_string_lossy().to_string()));
         std::fs::remove_file(&tmp).ok();
         assert!(result.is_ok());
 
         let val = result.unwrap();
         assert_eq!(val["encoding"].as_str().unwrap(), "UTF-8");
-        assert!(val["confidence"].as_u64().unwrap() >= 1);
+        assert!(val["has_bom"].as_bool().unwrap());
     }
 
     #[test]
@@ -798,12 +894,14 @@ mod tests {
         f.write_all(b"hello").unwrap();
         f.sync_all().unwrap();
 
-        let result = detect_encoding(tmp.to_string_lossy().to_string());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(detect_encoding(tmp.to_string_lossy().to_string()));
         std::fs::remove_file(&tmp).ok();
         assert!(result.is_ok());
 
         let val = result.unwrap();
         assert_eq!(val["encoding"].as_str().unwrap(), "UTF-8");
+        assert!(!val["has_bom"].as_bool().unwrap());
     }
 
     // --- convert_encoding tests ---
@@ -815,7 +913,11 @@ mod tests {
         f.write_all(b"hello world").unwrap();
         f.sync_all().unwrap();
 
-        let result = convert_encoding(tmp.to_string_lossy().to_string(), "UTF-8".to_string());
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(convert_encoding(
+            tmp.to_string_lossy().to_string(),
+            "UTF-8".to_string(),
+        ));
         std::fs::remove_file(&tmp).ok();
         assert!(result.is_ok());
 
@@ -835,10 +937,11 @@ mod tests {
         f.write_all(b"hello").unwrap();
         f.sync_all().unwrap();
 
-        let result = convert_encoding(
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let result = rt.block_on(convert_encoding(
             tmp.to_string_lossy().to_string(),
             "INVALID-ENCODING".to_string(),
-        );
+        ));
         std::fs::remove_file(&tmp).ok();
         assert!(result.is_err());
     }

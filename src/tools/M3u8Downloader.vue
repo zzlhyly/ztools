@@ -10,15 +10,26 @@ import {
   invokeParseM3u8,
   invokeStartDownload,
   invokeCancelDownload,
+  invokeCheckFfmpeg,
+  invokeMergeTs,
   invokeGetDefaultDownloadDir,
   onDownloadProgress,
   onDownloadComplete,
   onDownloadError,
-  type M3u8Info,
   type DownloadConfig,
 } from '@/utils/m3u8'
 import DownloadProgress from '@/components/DownloadProgress.vue'
-import { Download, Trash2, RotateCcw, X, Upload, FolderOpen, FileSearch } from 'lucide-vue-next'
+import {
+  Download,
+  Trash2,
+  RotateCcw,
+  X,
+  Upload,
+  FolderOpen,
+  FileSearch,
+  Combine,
+  ListX,
+} from 'lucide-vue-next'
 import { open } from '@tauri-apps/plugin-dialog'
 
 const { t } = useI18n()
@@ -29,7 +40,9 @@ const curlInput = ref('')
 const showCurlInput = ref(false)
 const showHeadersConfig = ref(false)
 const showQualitySelect = ref(false)
-const qualityOptions = ref<M3u8Info[]>([])
+const qualityTaskId = ref<string | null>(null)
+
+const qualityTask = computed(() => store.tasks.find((task) => task.id === qualityTaskId.value))
 
 const activeTasks = computed(() =>
   store.tasks.filter(
@@ -49,6 +62,11 @@ let unlistenError: (() => void) | null = null
 
 onMounted(async () => {
   unlistenProgress = await onDownloadProgress((event) => {
+    const task = store.tasks.find((t) => t.id === event.task_id)
+    // 忽略已结束任务的迟到事件，避免 cancelled/error 被改回 downloading
+    if (!task || task.status === 'done' || task.status === 'error' || task.status === 'cancelled') {
+      return
+    }
     store.updateTask(event.task_id, {
       progress: event.percent,
       speed: event.speed,
@@ -58,15 +76,24 @@ onMounted(async () => {
     })
   })
   unlistenComplete = await onDownloadComplete((event) => {
+    const task = store.tasks.find((t) => t.id === event.task_id)
+    if (!task || task.status === 'cancelled' || task.status === 'error') {
+      return
+    }
     store.updateTask(event.task_id, {
       status: 'done',
       progress: 100,
       speed: '',
       completedAt: Date.now(),
+      outputPath: event.output_path,
     })
-    ElMessage.success(t('common.done'))
+    ElMessage.success(`${t('common.done')}: ${event.output_path}`)
   })
   unlistenError = await onDownloadError((event) => {
+    const task = store.tasks.find((t) => t.id === event.task_id)
+    if (!task || task.status === 'cancelled' || task.status === 'done') {
+      return
+    }
     store.updateTask(event.task_id, {
       status: 'error',
       error: event.error,
@@ -181,7 +208,7 @@ async function startFromDirectUrl(url: string, headers: Record<string, string>) 
 
       if (resolvedQualities.length > 1) {
         store.updateTask(task.id, { status: 'selecting_quality' })
-        qualityOptions.value = [{ url, label: 'Master Playlist', qualities: resolvedQualities }]
+        qualityTaskId.value = task.id
         showQualitySelect.value = true
         return
       }
@@ -235,13 +262,7 @@ async function startFromWebpage(url: string, headers: Record<string, string>) {
 
       if (resolvedQualities.length > 1) {
         store.updateTask(task.id, { status: 'selecting_quality' })
-        qualityOptions.value = m3u8List.map((item) => ({
-          ...item,
-          qualities: item.qualities.map((q) => ({
-            ...q,
-            url: resolveUrl(q.url, item.url),
-          })),
-        }))
+        qualityTaskId.value = task.id
         showQualitySelect.value = true
         return
       }
@@ -271,8 +292,12 @@ async function startFromWebpage(url: string, headers: Record<string, string>) {
 }
 
 async function handleSelectQuality(qualityUrl: string, resolution: string) {
+  const taskId = qualityTaskId.value
+  qualityTaskId.value = null
   showQualitySelect.value = false
-  const task = store.tasks.find((t) => t.status === 'selecting_quality')
+  if (!taskId) return
+
+  const task = store.tasks.find((t) => t.id === taskId)
   if (!task) return
 
   store.updateTask(task.id, {
@@ -283,7 +308,22 @@ async function handleSelectQuality(qualityUrl: string, resolution: string) {
   await doStartDownload(task, qualityUrl, store.config.downloadDir)
 }
 
+function handleQualityDialogClose() {
+  // 用户未选择清晰度就关闭弹框，任务取消
+  if (qualityTaskId.value) {
+    store.cancelTask(qualityTaskId.value)
+    qualityTaskId.value = null
+  }
+}
+
 async function doStartDownload(task: M3u8Task, m3u8Url: string, outputDir: string) {
+  const ffmpegOk = await invokeCheckFfmpeg(store.config.ffmpegPath)
+  if (!ffmpegOk) {
+    store.updateTask(task.id, { status: 'error', error: t('common.ffmpegNotFound') })
+    ElMessage.error(t('common.ffmpegNotFound'))
+    return
+  }
+
   const filename = generateFilename(task, outputDir)
 
   store.updateTask(task.id, {
@@ -330,15 +370,77 @@ function generateFilename(task: M3u8Task, _outputDir: string): string {
 
 async function handleCancelTask(taskId: string) {
   try {
-    await ElMessageBox.confirm(t('common.confirmCancel'), t('common.cancel'), {
-      confirmButtonText: t('common.cancel'),
-      cancelButtonText: t('common.retry'),
+    await ElMessageBox.confirm(t('common.confirmCancel'), t('common.cancelDownload'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
       type: 'warning',
     })
-    await invokeCancelDownload(taskId)
-    store.cancelTask(taskId)
   } catch {
-    // User clicked cancel on dialog
+    return
+  }
+
+  try {
+    await invokeCancelDownload(taskId)
+  } catch (err) {
+    ElMessage.error(String(err))
+    return
+  }
+  store.cancelTask(taskId)
+}
+
+async function handleDeleteTask(taskId: string) {
+  try {
+    await ElMessageBox.confirm(t('common.confirmDelete'), t('common.deleteTask'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+
+  const task = store.tasks.find((t) => t.id === taskId)
+  if (!task) return
+
+  // 进行中的任务先通知后端停止下载，再移除记录
+  if (task.status === 'downloading' || task.status === 'converting' || task.status === 'parsing') {
+    try {
+      await invokeCancelDownload(taskId)
+    } catch (err) {
+      ElMessage.error(String(err))
+      return
+    }
+  }
+
+  if (qualityTaskId.value === taskId) {
+    qualityTaskId.value = null
+    showQualitySelect.value = false
+  }
+  store.removeTask(taskId)
+}
+
+async function handleClearHistory() {
+  try {
+    await ElMessageBox.confirm(t('common.confirmClearHistory'), t('common.clearHistory'), {
+      confirmButtonText: t('common.confirm'),
+      cancelButtonText: t('common.cancel'),
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  completedTasks.value.forEach((task) => store.removeTask(task.id))
+}
+
+async function handleMergeTs() {
+  const selected = await open({ directory: true, multiple: false })
+  if (!selected || typeof selected !== 'string') return
+
+  try {
+    const outputPath = await invokeMergeTs(selected, store.config.ffmpegPath)
+    ElMessage.success(`${t('common.mergeTsDone')}: ${outputPath}`)
+  } catch (err) {
+    ElMessage.error(String(err))
   }
 }
 
@@ -348,10 +450,6 @@ async function handleRetryTask(taskId: string) {
 
   store.retryTask(taskId)
   await doStartDownload(task, task.m3u8Url || task.url, store.config.downloadDir)
-}
-
-function handleRemoveTask(taskId: string) {
-  store.removeTask(taskId)
 }
 
 function handleBeforeUnload(e: BeforeUnloadEvent) {
@@ -402,6 +500,11 @@ onUnmounted(() => {
         <el-tooltip content="配置请求头（Referer、Cookie 等）" placement="bottom">
           <el-button text size="small" @click="showHeadersConfig = !showHeadersConfig">
             {{ t('common.headers') }}
+          </el-button>
+        </el-tooltip>
+        <el-tooltip :content="t('common.mergeTs')" placement="bottom">
+          <el-button text size="small" :icon="Combine" @click="handleMergeTs">
+            {{ t('common.mergeTs') }}
           </el-button>
         </el-tooltip>
       </div>
@@ -554,11 +657,15 @@ onUnmounted(() => {
       </div>
     </div>
 
-    <el-dialog v-model="showQualitySelect" :title="t('common.selectQuality')" width="400px">
+    <el-dialog
+      v-model="showQualitySelect"
+      :title="t('common.selectQuality')"
+      width="400px"
+      @close="handleQualityDialogClose"
+    >
       <div class="quality-list">
         <div
-          v-for="q in store.tasks.find((t) => t.status === 'selecting_quality')?.qualityOptions ||
-          []"
+          v-for="q in qualityTask?.qualityOptions || []"
           :key="q.url"
           class="quality-item"
           @click="handleSelectQuality(q.url, q.resolution)"
@@ -588,17 +695,25 @@ onUnmounted(() => {
           />
           <div class="task-actions">
             <el-button :icon="X" size="small" circle @click="handleCancelTask(task.id)" />
+            <el-button :icon="Trash2" size="small" circle @click="handleDeleteTask(task.id)" />
           </div>
         </div>
       </div>
 
       <div v-if="completedTasks.length > 0" class="task-section">
-        <div class="section-title">
-          {{ t('common.history') }}
+        <div class="section-title-row">
+          <div class="section-title">
+            {{ t('common.history') }}
+          </div>
+          <el-button text size="small" :icon="ListX" @click="handleClearHistory">
+            {{ t('common.clearHistory') }}
+          </el-button>
         </div>
         <div v-for="task in completedTasks" :key="task.id" class="task-item">
           <div class="task-info">
-            <span class="task-title" :title="task.url">{{ task.filename || task.url }}</span>
+            <span class="task-title" :title="task.outputPath || task.url">
+              {{ task.filename || task.url }}
+            </span>
             <span class="task-status" :class="{ error: task.status === 'error' }">
               {{ task.error || t(`common.${task.status}`) }}
             </span>
@@ -620,7 +735,7 @@ onUnmounted(() => {
               circle
               @click="handleRetryTask(task.id)"
             />
-            <el-button :icon="Trash2" size="small" circle @click="handleRemoveTask(task.id)" />
+            <el-button :icon="Trash2" size="small" circle @click="handleDeleteTask(task.id)" />
           </div>
         </div>
       </div>
@@ -791,6 +906,17 @@ onUnmounted(() => {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-bottom: var(--spacing-sm, 8px);
+}
+
+.section-title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--spacing-sm, 8px);
+}
+
+.section-title-row .section-title {
+  margin-bottom: 0;
 }
 
 .task-item {

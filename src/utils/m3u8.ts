@@ -120,6 +120,14 @@ export async function invokeCheckFfmpeg(ffmpegPath: string): Promise<boolean> {
   }
 }
 
+export async function invokeMergeTs(dir: string, ffmpegPath: string): Promise<string> {
+  try {
+    return await invoke<string>('merge_ts', { dir, ffmpegPath })
+  } catch (e) {
+    throw TauriError.from(e, 'DOWNLOAD_ERROR')
+  }
+}
+
 // ---- Event listeners ----
 
 export async function onDownloadProgress(

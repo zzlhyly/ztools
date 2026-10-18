@@ -28,6 +28,7 @@ export interface M3u8Task {
   downloaded: number
   total: number
   error?: string
+  outputPath?: string
   createdAt: number
   completedAt?: number
   qualityOptions?: M3u8QualityOption[]
@@ -41,7 +42,6 @@ export interface M3u8Config {
     cookie: string
     custom: Array<{ key: string; value: string }>
   }
-  maxTaskConcurrent: number
   maxSegmentConcurrent: number
 }
 
@@ -62,7 +62,6 @@ function defaultConfig(): M3u8Config {
       cookie: '',
       custom: [],
     },
-    maxTaskConcurrent: 1,
     maxSegmentConcurrent: 5,
   }
 }
@@ -86,7 +85,12 @@ function loadTasks(): M3u8Task[] {
       const tasks: M3u8Task[] = JSON.parse(raw)
       // Reset in-progress tasks from previous sessions (process was killed)
       return tasks.map((t) => {
-        if (t.status === 'downloading' || t.status === 'converting' || t.status === 'parsing') {
+        if (
+          t.status === 'downloading' ||
+          t.status === 'converting' ||
+          t.status === 'parsing' ||
+          t.status === 'selecting_quality'
+        ) {
           return {
             ...t,
             status: 'cancelled' as const,
@@ -158,7 +162,8 @@ export const useM3u8Store = defineStore('m3u8', () => {
   function updateTask(taskId: string, patch: Partial<M3u8Task>) {
     const index = tasks.value.findIndex((t) => t.id === taskId)
     if (index !== -1) {
-      tasks.value[index] = { ...tasks.value[index], ...patch }
+      // 原地更新，保持外部持有的 task 引用有效
+      Object.assign(tasks.value[index], patch)
     }
   }
 
@@ -175,7 +180,10 @@ export const useM3u8Store = defineStore('m3u8', () => {
       status: 'parsing',
       progress: 0,
       speed: '',
+      downloaded: 0,
+      total: 0,
       error: undefined,
+      outputPath: undefined,
     })
   }
 

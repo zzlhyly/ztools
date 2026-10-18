@@ -6,11 +6,11 @@ use crate::DownloadConfig;
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use tauri::AppHandle;
 use tauri::Emitter;
 use tokio::sync::Semaphore;
-use tracing::info;
+use tracing::{error, info};
 
 #[derive(Debug, Clone, Serialize)]
 struct ProgressEvent {
@@ -27,13 +27,21 @@ struct CompleteEvent {
     output_path: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
-struct ErrorEvent {
-    task_id: String,
-    error: String,
+/// 标记分段任务因用户取消而返回的错误，聚合阶段据此安静退出。
+const CANCEL_MARKER: &str = "TASK_CANCELLED";
+
+fn is_task_cancelled(cancel_flags: &Mutex<HashMap<String, bool>>, task_id: &str) -> bool {
+    cancel_flags
+        .lock()
+        .map(|flags| flags.get(task_id).copied().unwrap_or(false))
+        .unwrap_or(false)
 }
 
-pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Result<(), AppError> {
+pub async fn run_download(
+    config: &DownloadConfig,
+    app_handle: &AppHandle,
+    cancel_flags: Arc<Mutex<HashMap<String, bool>>>,
+) -> Result<(), AppError> {
     let task_id = config.task_id.clone();
     info!(
         "Starting download: task_id={}, url={}",
@@ -80,13 +88,6 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
     let info = playlist::parse_m3u8(&content);
 
     if !info.has_endlist {
-        let _ = app_handle.emit(
-            "download-error",
-            ErrorEvent {
-                task_id: task_id.clone(),
-                error: "Live streams are not supported".to_string(),
-            },
-        );
         return Err(AppError::Unsupported(
             "Live streams are not supported".into(),
         ));
@@ -95,13 +96,6 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
     let segments = info.segments.clone();
     let total = segments.len();
     if total == 0 {
-        let _ = app_handle.emit(
-            "download-error",
-            ErrorEvent {
-                task_id: task_id.clone(),
-                error: "No segments found in playlist".to_string(),
-            },
-        );
         return Err(AppError::Parse("No segments found in playlist".into()));
     }
 
@@ -185,12 +179,14 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
             }
 
             if let Some(ki) = active_key {
+                // RFC 8216 §5.2：未提供 IV 时使用分段的媒体序列号（media_sequence + 序号）
+                let seq = info.media_sequence + i as u64;
                 match &ki.iv {
                     Some(iv_hex) => match decrypt::parse_iv(iv_hex) {
                         Ok(arr) => Some(arr.to_vec()),
-                        Err(_) => Some(decrypt::default_iv(i as u32 + 1).to_vec()),
+                        Err(_) => Some(decrypt::default_iv(seq).to_vec()),
                     },
-                    None => Some(decrypt::default_iv(i as u32 + 1).to_vec()),
+                    None => Some(decrypt::default_iv(seq).to_vec()),
                 }
             } else {
                 None
@@ -199,8 +195,14 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
             None
         };
 
+        let cancel_flags = cancel_flags.clone();
+
         let handle = tokio::spawn(async move {
             let _permit = semaphore.acquire().await.unwrap();
+
+            if is_task_cancelled(&cancel_flags, &task_id) {
+                return Err(AppError::Unsupported(CANCEL_MARKER.to_string()));
+            }
 
             // Resume: skip if segment already exists
             if output_path.exists() {
@@ -214,6 +216,10 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
             // Download with 3 retries
             let mut last_error = String::new();
             for retry in 0..3 {
+                if is_task_cancelled(&cancel_flags, &task_id) {
+                    return Err(AppError::Unsupported(CANCEL_MARKER.to_string()));
+                }
+
                 let mut req = client.get(&segment_url);
                 for (k, v) in &headers {
                     req = req.header(k.as_str(), v.as_str());
@@ -283,34 +289,43 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
     }
 
     // Wait for all downloads
-    let mut has_error = false;
-    let mut error_msg = String::new();
+    let mut first_err: Option<AppError> = None;
+    let mut cancelled = false;
     for handle in handles {
         match handle.await {
             Ok(Ok(_)) => {}
+            Ok(Err(AppError::Unsupported(msg))) if msg == CANCEL_MARKER => {
+                cancelled = true;
+            }
             Ok(Err(e)) => {
-                has_error = true;
-                error_msg = e.to_string();
+                // 保留第一个原始错误，避免二次包装丢失错误码
+                if first_err.is_none() {
+                    first_err = Some(e);
+                }
             }
             Err(e) => {
-                has_error = true;
-                error_msg = format!("Task join error: {}", e);
+                if first_err.is_none() {
+                    first_err = Some(AppError::Unknown(format!("Task join error: {}", e)));
+                }
             }
         }
     }
 
-    if has_error {
-        let _ = app_handle.emit(
-            "download-error",
-            ErrorEvent {
-                task_id: task_id.clone(),
-                error: error_msg.clone(),
-            },
-        );
-        return Err(AppError::from(error_msg));
+    if cancelled {
+        info!("Download cancelled: task_id={}", task_id);
+        return Ok(());
     }
 
-    // Step 5: Convert to MP4 (or save TS files if ffmpeg unavailable)
+    if let Some(e) = first_err {
+        return Err(e);
+    }
+
+    // Step 5: Convert to MP4 with FFmpeg
+    if is_task_cancelled(&cancel_flags, &task_id) {
+        info!("Download cancelled before conversion: task_id={}", task_id);
+        return Ok(());
+    }
+
     let _ = app_handle.emit(
         "download-progress",
         ProgressEvent {
@@ -322,8 +337,16 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
         },
     );
 
-    match converter::convert_to_mp4(&temp_dir, &output_path, &config.ffmpeg_path) {
-        Ok(()) => {
+    let conv_dir = temp_dir.clone();
+    let conv_output = output_path.clone();
+    let ffmpeg_path = config.ffmpeg_path.clone();
+    let convert_result = tokio::task::spawn_blocking(move || {
+        converter::convert_to_mp4(&conv_dir, &conv_output, &ffmpeg_path)
+    })
+    .await;
+
+    match convert_result {
+        Ok(Ok(())) => {
             let _ = std::fs::remove_dir_all(temp_dir.parent().unwrap_or(&temp_dir));
             info!(
                 "Download complete: task_id={}, output={}",
@@ -338,56 +361,20 @@ pub async fn run_download(config: &DownloadConfig, app_handle: &AppHandle) -> Re
                 },
             );
         }
+        Ok(Err(e)) => {
+            // 转换失败时保留已下载的分段文件，用户修正 FFmpeg 路径后重试可断点续传
+            error!("FFmpeg conversion failed: task_id={}, error={}", task_id, e);
+            return Err(AppError::Ffmpeg(format!(
+                "FFmpeg conversion failed: {}. The downloaded segments are kept, fix the FFmpeg path and retry to resume.",
+                e
+            )));
+        }
         Err(e) => {
-            // ffmpeg unavailable — copy TS segments to output dir
-            eprintln!("[ztools] ffmpeg failed ({}), saving TS files...", e);
-            let ts_dir = output_path.with_file_name(format!(
-                "{}_TS",
-                output_path
-                    .file_stem()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-            ));
-            std::fs::create_dir_all(&ts_dir).ok();
-
-            let concat_file = temp_dir.join("concat.txt");
-            let mut ts_copied = 0usize;
-            let mut ts_names: Vec<String> = Vec::new();
-            if let Ok(dir_entries) = std::fs::read_dir(&temp_dir) {
-                for entry in dir_entries.flatten() {
-                    let path = entry.path();
-                    if path.extension().map(|e| e == "ts").unwrap_or(false) {
-                        if let Some(name) = path.file_name() {
-                            let dest = ts_dir.join(name);
-                            std::fs::copy(&path, &dest).ok();
-                            ts_names.push(format!("file '{}'", dest.to_string_lossy()));
-                            ts_copied += 1;
-                        }
-                    }
-                }
-            }
-            // Also copy concat.txt
-            if concat_file.exists() {
-                std::fs::copy(&concat_file, ts_dir.join("concat.txt")).ok();
-            }
-
-            // Clean up temp dir
-            let _ = std::fs::remove_dir_all(temp_dir.parent().unwrap_or(&temp_dir));
-
-            eprintln!(
-                "[ztools] TS segments saved: task_id={}, ts_dir={}, files={}",
-                task_id,
-                ts_dir.display(),
-                ts_copied
-            );
-            let emit_result = app_handle.emit(
-                "download-complete",
-                CompleteEvent {
-                    task_id: task_id.clone(),
-                    output_path: ts_dir.to_string_lossy().to_string(),
-                },
-            );
-            eprintln!("[ztools] download-complete emitted: {:?}", emit_result);
+            error!("Conversion task panicked: task_id={}, error={}", task_id, e);
+            return Err(AppError::Unknown(format!(
+                "Conversion task panicked: {}",
+                e
+            )));
         }
     }
 

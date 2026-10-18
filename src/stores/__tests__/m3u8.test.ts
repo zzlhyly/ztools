@@ -33,7 +33,6 @@ describe('M3U8 Store', () => {
       const store = useM3u8Store()
       expect(store.config.downloadDir).toBe('')
       expect(store.config.ffmpegPath).toBe('ffmpeg')
-      expect(store.config.maxTaskConcurrent).toBe(1)
       expect(store.config.maxSegmentConcurrent).toBe(5)
       expect(store.config.headers.referer).toBe('')
       expect(store.config.headers.cookie).toBe('')
@@ -100,6 +99,29 @@ describe('M3U8 Store', () => {
       store.cancelTask(task.id)
       const cancelled = store.tasks.find((t) => t.id === task.id)!
       expect(cancelled.status).toBe('cancelled')
+    })
+
+    it('should reset progress counters on retry', () => {
+      const store = useM3u8Store()
+      const task = store.addTask('https://example.com/video', 'direct')
+      store.updateTask(task.id, {
+        status: 'downloading',
+        progress: 50,
+        speed: '2.0 MB/s',
+        downloaded: 100,
+        total: 200,
+        error: 'network error',
+        outputPath: '/tmp/out.mp4',
+      })
+      store.retryTask(task.id)
+      const retried = store.tasks.find((t) => t.id === task.id)!
+      expect(retried.status).toBe('parsing')
+      expect(retried.progress).toBe(0)
+      expect(retried.speed).toBe('')
+      expect(retried.downloaded).toBe(0)
+      expect(retried.total).toBe(0)
+      expect(retried.error).toBeUndefined()
+      expect(retried.outputPath).toBeUndefined()
     })
 
     it('should mark task as done with completedAt', () => {

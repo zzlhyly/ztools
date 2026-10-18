@@ -38,6 +38,9 @@ pub struct PlaylistInfo {
     pub keys: Vec<KeyInfo>,
     pub has_encryption: bool,
     pub has_endlist: bool,
+    /// EXT-X-MEDIA-SEQUENCE，AES 默认 IV 的计算基准，缺省为 0
+    #[serde(default)]
+    pub media_sequence: u64,
     pub raw: String,
 }
 
@@ -70,26 +73,36 @@ pub fn parse_m3u8(content: &str) -> PlaylistInfo {
     result
 }
 
+/// 在属性列表中查找属性值，只在属性边界（':'或','之后）匹配，
+/// 避免 BANDWIDTH= 误匹配到 AVERAGE-BANDWIDTH= 的后缀。
+fn find_attr<'a>(line: &'a str, attr: &str) -> Option<&'a str> {
+    let needle = format!("{}=", attr);
+    let mut search = 0;
+    while let Some(pos) = line[search..].find(&needle) {
+        let abs = search + pos;
+        if line[..abs].ends_with(':') || line[..abs].ends_with(',') {
+            let rest = &line[abs + needle.len()..];
+            let end = rest.find(',').unwrap_or(rest.len());
+            return Some(&rest[..end]);
+        }
+        search = abs + needle.len();
+    }
+    None
+}
+
 fn parse_master_playlist(lines: &[&str]) -> PlaylistInfo {
     let mut qualities = Vec::new();
     let mut i = 0;
 
     while i < lines.len() {
         if lines[i].starts_with("#EXT-X-STREAM-INF") {
-            let mut bandwidth: u64 = 0;
-            let mut resolution = String::from("unknown");
-
             let line = lines[i];
-            if let Some(bw_start) = line.find("BANDWIDTH=") {
-                let bw_part = &line[bw_start + 10..];
-                let bw_end = bw_part.find(',').unwrap_or(bw_part.len());
-                bandwidth = bw_part[..bw_end].parse().unwrap_or(0);
-            }
-            if let Some(res_start) = line.find("RESOLUTION=") {
-                let res_part = &line[res_start + 11..];
-                let res_end = res_part.find(',').unwrap_or(res_part.len());
-                resolution = res_part[..res_end].to_string();
-            }
+            let bandwidth = find_attr(line, "BANDWIDTH")
+                .and_then(|v| v.parse().ok())
+                .unwrap_or(0);
+            let resolution = find_attr(line, "RESOLUTION")
+                .map(|v| v.to_string())
+                .unwrap_or_else(|| String::from("unknown"));
 
             for (j, line_j) in lines.iter().enumerate().skip(i + 1) {
                 if !line_j.is_empty() && !line_j.starts_with('#') {
@@ -113,6 +126,7 @@ fn parse_master_playlist(lines: &[&str]) -> PlaylistInfo {
         keys: vec![],
         has_encryption: false,
         has_endlist: true,
+        media_sequence: 0,
         raw: String::new(),
     }
 }
@@ -122,8 +136,13 @@ fn parse_media_playlist(lines: &[&str], has_endlist: bool, raw: &str) -> Playlis
     let mut keys = Vec::new();
     let mut has_encryption = false;
     let mut seg_index = 0;
+    let mut media_sequence: u64 = 0;
 
     for (i, line) in lines.iter().enumerate() {
+        if let Some(seq_str) = line.strip_prefix("#EXT-X-MEDIA-SEQUENCE:") {
+            media_sequence = seq_str.trim().parse().unwrap_or(0);
+        }
+
         if line.starts_with("#EXT-X-KEY") {
             let mut method = String::new();
             let mut uri: Option<String> = None;
@@ -195,12 +214,13 @@ fn parse_media_playlist(lines: &[&str], has_endlist: bool, raw: &str) -> Playlis
         keys,
         has_encryption,
         has_endlist,
+        media_sequence,
         raw: raw.to_string(),
     }
 }
 
 /// Extract M3U8 URLs from HTML content.
-pub fn extract_m3u8_urls(html: &str, _base_url: &str) -> Vec<M3u8UrlInfo> {
+pub fn extract_m3u8_urls(html: &str, base_url: &str) -> Vec<M3u8UrlInfo> {
     debug!("Extracting M3U8 URLs from HTML ({} bytes)", html.len());
     let mut results = Vec::new();
 
@@ -222,21 +242,25 @@ pub fn extract_m3u8_urls(html: &str, _base_url: &str) -> Vec<M3u8UrlInfo> {
 
     for element in document.select(&video_selector) {
         if let Some(src) = element.value().attr("src") {
-            if !src.starts_with("http") {
+            if !src.contains("m3u8") {
                 continue;
             }
-            if src.contains(".m3u8") || src.contains("m3u8") {
-                let label = element.value().attr("title").unwrap_or("").to_string();
-                if let Some(existing) = results.iter_mut().find(|r| r.url == src) {
-                    if existing.label.is_empty() {
-                        existing.label = label;
-                    }
-                } else {
-                    results.push(M3u8UrlInfo {
-                        url: src.to_string(),
-                        label,
-                    });
+            // 相对路径与协议相对路径按 base_url 解析为绝对 URL
+            let url = if src.starts_with("http://") || src.starts_with("https://") {
+                src.to_string()
+            } else {
+                match url::Url::parse(base_url).and_then(|base| base.join(src)) {
+                    Ok(resolved) => resolved.to_string(),
+                    Err(_) => continue,
                 }
+            };
+            let label = element.value().attr("title").unwrap_or("").to_string();
+            if let Some(existing) = results.iter_mut().find(|r| r.url == url) {
+                if existing.label.is_empty() {
+                    existing.label = label;
+                }
+            } else {
+                results.push(M3u8UrlInfo { url, label });
             }
         }
     }
@@ -334,5 +358,53 @@ mod tests {
             info.keys[0].iv.as_deref(),
             Some("ABCDEF1234567890ABCDEF1234567890")
         );
+    }
+
+    #[test]
+    fn test_parse_master_playlist_with_average_bandwidth() {
+        // AVERAGE-BANDWIDTH 不能干扰 BANDWIDTH 的解析
+        let content = "#EXTM3U\n#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=900000,BANDWIDTH=2000000,RESOLUTION=1280x720\nhttps://example.com/mid.m3u8\n";
+        let info = parse_m3u8(content);
+
+        assert_eq!(info.qualities.len(), 1);
+        assert_eq!(info.qualities[0].bandwidth, 2000000);
+        assert_eq!(info.qualities[0].resolution, "1280x720");
+    }
+
+    #[test]
+    fn test_parse_media_sequence() {
+        let content =
+            "#EXTM3U\n#EXT-X-MEDIA-SEQUENCE:100\n#EXTINF:10.0,\nseg1.ts\n#EXT-X-ENDLIST\n";
+        let info = parse_m3u8(content);
+
+        assert_eq!(info.media_sequence, 100);
+    }
+
+    #[test]
+    fn test_media_sequence_defaults_to_zero() {
+        let content = "#EXTM3U\n#EXTINF:10.0,\nseg1.ts\n#EXT-X-ENDLIST\n";
+        let info = parse_m3u8(content);
+
+        assert_eq!(info.media_sequence, 0);
+    }
+
+    #[test]
+    fn test_extract_relative_m3u8_from_html() {
+        let html = r#"<html><body><video><source src="/hls/index.m3u8" title="Main"></video></body></html>"#;
+        let urls = extract_m3u8_urls(html, "https://example.com/watch/page");
+
+        assert_eq!(urls.len(), 1);
+        assert_eq!(urls[0].url, "https://example.com/hls/index.m3u8");
+        assert_eq!(urls[0].label, "Main");
+    }
+
+    #[test]
+    fn test_extract_protocol_relative_m3u8_from_html() {
+        let html =
+            r#"<html><body><video src="//cdn.example.com/v/index.m3u8"></video></body></html>"#;
+        let urls = extract_m3u8_urls(html, "https://example.com/");
+
+        assert_eq!(urls.len(), 1);
+        assert_eq!(urls[0].url, "https://cdn.example.com/v/index.m3u8");
     }
 }

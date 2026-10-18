@@ -224,7 +224,7 @@ const handleClear = () => {
             :disabled="!signData"
             @click="handleSign"
           >
-            {{ t('common.encrypt') }}
+            {{ t('common.sign') }}
           </el-button>
         </div>
         <div v-if="signature" class="ed-result">

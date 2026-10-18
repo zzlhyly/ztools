@@ -92,6 +92,13 @@ const handleVerify = async () => {
 
   verificationStatus.value = 'idle'
 
+  // 仅支持 RS256，其他算法给出明确提示，避免误报 invalid
+  const alg = parsed.value.header.alg
+  if (alg !== 'RS256') {
+    ElMessage.warning(t('common.unsupportedAlgorithm', { alg: String(alg ?? 'unknown') }))
+    return
+  }
+
   try {
     const pem = publicKeyPem.value.trim()
     const b64 = pem

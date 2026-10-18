@@ -24,7 +24,7 @@ export async function closeWindow(): Promise<void> {
 
 export async function isWindowMaximized(): Promise<boolean> {
   try {
-    return getCurrentWindow().isMaximized()
+    return await getCurrentWindow().isMaximized()
   } catch {
     return false
   }

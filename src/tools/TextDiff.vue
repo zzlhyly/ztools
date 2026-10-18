@@ -59,15 +59,19 @@ const handleCompare = () => {
         })
         i++ // skip the next
       } else {
-        blocks.push({ type: 'removed', leftLines: lines, rightLines: [] })
+        // 右列补空行，保持左右两列行数对齐
+        blocks.push({ type: 'removed', leftLines: lines, rightLines: Array(lines.length).fill('') })
       }
     } else if (change.added) {
-      blocks.push({ type: 'added', leftLines: [], rightLines: lines })
+      blocks.push({ type: 'added', leftLines: Array(lines.length).fill(''), rightLines: lines })
     }
   }
 
   diffBlocks.value = blocks
   hasDiff.value = true
+  if (showUnified.value) {
+    buildUnifiedDiff()
+  }
 }
 
 const handleClear = () => {
@@ -82,6 +86,10 @@ const handleSwap = () => {
   const tmp = textA.value
   textA.value = textB.value
   textB.value = tmp
+  // 交换输入后重新计算，保持两侧展示与当前文本对应
+  if (hasDiff.value) {
+    handleCompare()
+  }
 }
 
 // Unified diff string
@@ -113,7 +121,10 @@ const buildUnifiedDiff = () => {
       (change.value.endsWith('\n')
         ? change.value.split('\n').length - 1
         : change.value.split('\n').length)
-    const lines = change.value.split('\n').filter((l) => l !== '')
+    // 保留空行，仅去掉结尾换行产生的空串
+    const lines = change.value.endsWith('\n')
+      ? change.value.slice(0, -1).split('\n')
+      : change.value.split('\n')
 
     if (!change.added && !change.removed) {
       // context — start hunk if first context in a while

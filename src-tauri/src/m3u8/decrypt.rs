@@ -35,7 +35,7 @@ pub fn decrypt_aes128_cbc(data: &[u8], key: &[u8], iv: &[u8]) -> Result<Vec<u8>,
     let mut buf = data.to_vec();
     let mut cipher = Aes128CbcDec::new(key.into(), iv.into());
 
-    for chunk in buf.chunks_exact_mut(16) {
+    for chunk in buf.as_chunks_mut::<16>().0 {
         let block = GenericArray::from_mut_slice(chunk);
         cipher.decrypt_block_mut(block);
     }
@@ -62,10 +62,11 @@ pub fn parse_iv(iv_str: &str) -> Result<[u8; 16], String> {
     Ok(arr)
 }
 
-/// Default IV from segment index (HLS spec: IV = segment_index as big-endian u128).
-pub fn default_iv(segment_index: u32) -> [u8; 16] {
+/// Default IV from media sequence number (HLS spec RFC 8216 §5.2:
+/// IV = the segment's zero-based media sequence number as a big-endian 128-bit integer).
+pub fn default_iv(media_sequence: u64) -> [u8; 16] {
     let mut iv = [0u8; 16];
-    iv[12..16].copy_from_slice(&segment_index.to_be_bytes());
+    iv[8..16].copy_from_slice(&media_sequence.to_be_bytes());
     iv
 }
 
@@ -131,7 +132,14 @@ mod tests {
     #[test]
     fn test_default_iv() {
         let iv = default_iv(42);
-        assert_eq!(iv[12..16], [0x00, 0x00, 0x00, 0x2a]);
+        assert_eq!(iv[8..16], [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2a]);
+    }
+
+    #[test]
+    fn test_default_iv_large_sequence() {
+        // 超过 32 位的媒体序列号也要正确写入低 8 字节
+        let iv = default_iv(0x0102_0304_0506_0708);
+        assert_eq!(iv[8..16], [0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08]);
     }
 
     #[test]

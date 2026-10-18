@@ -10,7 +10,9 @@ import {
   getRsaMaxPayload,
   CryptoError,
   arrayBufferToHex,
+  arrayBufferToBase64,
   base64ToArrayBuffer,
+  hexToArrayBuffer,
 } from '@/utils/crypto'
 import { useClipboard } from '@/composables/useClipboard'
 import ToolLayout from '@/components/ToolLayout.vue'
@@ -87,7 +89,11 @@ async function handleDecrypt() {
   if (isProcessing.value || !input.value.trim() || !privateKey.value.trim()) return
   try {
     isProcessing.value = true
-    const normalized = outputFormat.value === 'HEX' ? input.value : input.value
+    // HEX 格式的密文先转换为 base64 再解密
+    const normalized =
+      outputFormat.value === 'HEX'
+        ? arrayBufferToBase64(hexToArrayBuffer(input.value.trim()))
+        : input.value
     const result = await rsaDecrypt(normalized, privateKey.value, encryptPadding.value)
     output.value = result
     ElMessage.success('Decrypted')
@@ -103,7 +109,8 @@ async function handleSign() {
   try {
     isProcessing.value = true
     const result = await rsaSign(input.value, privateKey.value, signPadding.value)
-    signatureForVerify.value = result
+    // 签名框中的签名始终与当前输出格式保持一致
+    signatureForVerify.value = outputFormat.value === 'HEX' ? convertToHex(result) : result
     output.value = outputFormat.value === 'HEX' ? convertToHex(result) : result
     ElMessage.success('Signed')
   } catch (e) {
@@ -121,12 +128,12 @@ async function handleVerify() {
   }
   try {
     isProcessing.value = true
-    const valid = await rsaVerify(
-      signatureForVerify.value,
-      input.value,
-      publicKey.value,
-      signPadding.value,
-    )
+    // 按当前输出格式解析签名（HEX 签名转为 base64）
+    const signature =
+      outputFormat.value === 'HEX'
+        ? arrayBufferToBase64(hexToArrayBuffer(signatureForVerify.value.trim()))
+        : signatureForVerify.value
+    const valid = await rsaVerify(signature, input.value, publicKey.value, signPadding.value)
     output.value = valid ? '\u2713 Signature valid' : '\u2717 Signature invalid'
     ElMessage.success(valid ? 'Signature is valid' : 'Signature is invalid')
   } catch (e) {

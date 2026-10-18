@@ -1,22 +1,36 @@
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 
+// 读取 localStorage 中的 JSON，解析失败时返回默认值
+function loadStoredJson<T>(key: string, fallback: T): T {
+  try {
+    return JSON.parse(localStorage.getItem(key) || '') as T
+  } catch {
+    return fallback
+  }
+}
+
 export const useAppStore = defineStore('app', () => {
   // State
   const theme = ref<'light' | 'dark' | 'system'>(
     (localStorage.getItem('theme') as 'light' | 'dark' | 'system') || 'system',
   )
   const sidebarCollapsed = ref(false)
-  const recentTools = ref<string[]>(JSON.parse(localStorage.getItem('recentTools') || '[]'))
-  const toolInputs = ref<Record<string, string>>(
-    JSON.parse(localStorage.getItem('toolInputs') || '{}'),
-  )
+  const recentTools = ref<string[]>(loadStoredJson('recentTools', [] as string[]))
+  const toolInputs = ref<Record<string, string>>(loadStoredJson('toolInputs', {}))
   const locale = ref(localStorage.getItem('locale') || 'zh-CN')
 
-  // Computed - 自动响应 theme 变化
+  // 系统深色模式，响应运行中的系统主题切换
+  const systemDarkQuery = window.matchMedia('(prefers-color-scheme: dark)')
+  const systemDark = ref(systemDarkQuery.matches)
+  systemDarkQuery.addEventListener('change', (e) => {
+    systemDark.value = e.matches
+  })
+
+  // Computed
   const isDark = computed(() => {
     if (theme.value === 'system') {
-      return window.matchMedia('(prefers-color-scheme: dark)').matches
+      return systemDark.value
     }
     return theme.value === 'dark'
   })

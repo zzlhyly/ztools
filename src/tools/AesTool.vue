@@ -35,20 +35,12 @@ const lastOperation = ref<'encrypt' | 'decrypt' | null>(null)
 
 const MODES = ['CBC', 'CTR', 'GCM'] as const
 const KEY_SIZES = [128, 192, 256] as const
-const PADDINGS = ['PKCS7', 'NoPadding', 'ZeroPadding'] as const
+// WebCrypto 的 AES-CBC 强制使用 PKCS7 填充，NoPadding/ZeroPadding 无法实现
+const PADDINGS = ['PKCS7'] as const
 const OUTPUT_FORMATS = ['Base64', 'HEX'] as const
 const MODES_WITHOUT_PADDING = ['CTR', 'GCM']
 
 const showPadding = computed(() => !MODES_WITHOUT_PADDING.includes(mode.value))
-
-const noPaddingWarning = computed(() => {
-  if (padding.value !== 'NoPadding' || !input.value) return ''
-  const raw = new TextEncoder().encode(input.value)
-  if (raw.length % 16 === 0) return ''
-  return `Byte alignment warning: ${raw.length} bytes is not a multiple of 16. Result may be incorrect.`
-})
-
-const showWarning = computed(() => !!noPaddingWarning.value)
 
 function convertOutputForDisplay(data: string): string {
   if (outputFormat.value === 'HEX') {
@@ -64,7 +56,8 @@ function convertInputForDecrypt(data: string): string {
   return data
 }
 
-async function handleEncrypt() {
+// silent 为 true 时（watch 自动重跑）不弹出成功提示
+async function handleEncrypt(silent = false) {
   if (isProcessing.value || !input.value.trim()) return
   if (!keyHex.value.trim() || !ivHex.value.trim()) {
     ElMessage.warning(t('errors.invalidInput'))
@@ -83,7 +76,7 @@ async function handleEncrypt() {
     output.value = convertOutputForDisplay(result)
     lastSucceeded.value = true
     lastOperation.value = 'encrypt'
-    ElMessage.success(t('common.success'))
+    if (silent !== true) ElMessage.success(t('common.success'))
   } catch (e) {
     lastSucceeded.value = false
     lastOperation.value = null
@@ -93,7 +86,7 @@ async function handleEncrypt() {
   }
 }
 
-async function handleDecrypt() {
+async function handleDecrypt(silent = false) {
   if (isProcessing.value || !input.value.trim()) return
   if (!keyHex.value.trim() || !ivHex.value.trim()) {
     ElMessage.warning(t('errors.invalidInput'))
@@ -113,7 +106,7 @@ async function handleDecrypt() {
     output.value = result
     lastSucceeded.value = true
     lastOperation.value = 'decrypt'
-    ElMessage.success(t('common.success'))
+    if (silent !== true) ElMessage.success(t('common.success'))
   } catch (e) {
     lastSucceeded.value = false
     lastOperation.value = null
@@ -142,11 +135,24 @@ const handleClear = () => {
   lastOperation.value = null
 }
 
-watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
+watch([mode, keySize, padding, keyHex, ivHex], () => {
   if (!lastSucceeded.value || !input.value.trim() || !keyHex.value.trim() || !ivHex.value.trim())
     return
-  if (lastOperation.value === 'encrypt') handleEncrypt()
-  else if (lastOperation.value === 'decrypt') handleDecrypt()
+  if (lastOperation.value === 'encrypt') handleEncrypt(true)
+  else if (lastOperation.value === 'decrypt') handleDecrypt(true)
+})
+
+// 输出格式切换只影响加密结果的编码展示；解密时输入按格式解析，切格式不重跑避免误读输入
+watch(outputFormat, () => {
+  if (
+    lastSucceeded.value &&
+    lastOperation.value === 'encrypt' &&
+    input.value.trim() &&
+    keyHex.value.trim() &&
+    ivHex.value.trim()
+  ) {
+    handleEncrypt(true)
+  }
 })
 </script>
 
@@ -173,7 +179,7 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
           v-model="input"
           :placeholder="t('common.placeholder')"
           submit-hotkey
-          @submit="handleEncrypt"
+          @submit="() => handleEncrypt()"
         />
         <div class="key-iv-row">
           <div class="key-iv-field">
@@ -203,17 +209,14 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
             </el-button>
           </div>
         </div>
-        <div v-if="showWarning" class="no-padding-warning">
-          {{ noPaddingWarning }}
-        </div>
       </div>
     </template>
 
     <template #actions>
-      <el-button type="primary" :icon="Lock" :loading="isProcessing" @click="handleEncrypt">
+      <el-button type="primary" :icon="Lock" :loading="isProcessing" @click="() => handleEncrypt()">
         {{ t('common.encrypt') }}
       </el-button>
-      <el-button :icon="Unlock" :loading="isProcessing" @click="handleDecrypt">
+      <el-button :icon="Unlock" :loading="isProcessing" @click="() => handleDecrypt()">
         {{ t('common.decrypt') }}
       </el-button>
       <el-button :icon="Trash2" @click="handleClear">
@@ -263,14 +266,5 @@ watch([mode, keySize, padding, outputFormat, keyHex, ivHex], () => {
 :deep(.key-iv-input .el-input__wrapper) {
   font-family: var(--font-family-mono, 'Cascadia Code', 'Fira Code', monospace);
   font-size: var(--font-size-sm, 12px);
-}
-
-.no-padding-warning {
-  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
-  background: var(--el-color-warning-light-9, #fdf6ec);
-  border: 1px solid var(--el-color-warning-light-7, #faecd8);
-  border-radius: var(--radius-md, 6px);
-  font-size: var(--font-size-xs, 12px);
-  color: var(--el-color-warning, #e6a23c);
 }
 </style>

@@ -14,8 +14,12 @@ export function useClipboard(source: Ref<string>) {
   const { t } = useI18n()
   return async () => {
     if (source.value) {
-      await copyToClipboard(source.value)
-      ElMessage.success(t('common.copied'))
+      const ok = await copyToClipboard(source.value)
+      if (ok) {
+        ElMessage.success(t('common.copied'))
+      } else {
+        ElMessage.error(t('errors.unknown'))
+      }
     }
   }
 }

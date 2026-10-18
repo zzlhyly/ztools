@@ -20,7 +20,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div data-tauri-drag-region class="titlebar" :class="{ 'is-mac': isMac }">
+  <div data-tauri-drag-region="deep" class="titlebar" :class="{ 'is-mac': isMac }">
     <div class="titlebar-brand" :style="{ paddingLeft: isMac ? '70px' : '16px' }">
       <Wrench :size="14" class="brand-icon" />
       <span class="titlebar-title">{{ title }}</span>

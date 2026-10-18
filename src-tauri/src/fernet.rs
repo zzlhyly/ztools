@@ -209,6 +209,8 @@ pub async fn fetch_video_detail(
 ) -> Result<VideoInfo, String> {
     let site = get_site(site_key).ok_or_else(|| format!("Site '{}' not found", site_key))?;
     let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 
@@ -283,6 +285,8 @@ pub async fn fetch_video_list(
 ) -> Result<Vec<VideoListItem>, String> {
     let site = get_site(site_key).ok_or_else(|| format!("Site '{}' not found", site_key))?;
     let client = reqwest::Client::builder()
+        .connect_timeout(std::time::Duration::from_secs(10))
+        .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to build client: {}", e))?;
 

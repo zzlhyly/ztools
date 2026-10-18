@@ -1,19 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import { openPath } from '@tauri-apps/plugin-opener'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import ToolLayout from '@/components/ToolLayout.vue'
-import { Upload, Download } from 'lucide-vue-next'
+import { Upload, FolderOpen } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const appStore = useAppStore()
 
 const targetEncoding = ref(appStore.getToolInput('/encoding') || 'UTF-8')
-const inputFile = ref<File | null>(null)
+const inputPath = ref('')
 const fileName = ref('')
 const detectedEncoding = ref('')
-const confidence = ref(0)
+const hasBom = ref(false)
 const outputPath = ref('')
 const hadErrors = ref(false)
 const converting = ref(false)
@@ -31,47 +34,68 @@ const encodingOptions = [
   { label: 'Windows-1252', value: 'windows-1252' },
 ]
 
-async function onFileDrop(e: DragEvent) {
-  e.preventDefault()
-  const files = e.dataTransfer?.files
-  if (!files || files.length === 0) return
-  inputFile.value = files[0]
-  fileName.value = files[0].name
+function setFile(path: string) {
+  fileName.value = path.split(/[/\\]/).pop() || path
+  inputPath.value = path
   outputPath.value = ''
+  detectedEncoding.value = ''
+  hasBom.value = false
   error.value = ''
-  await detect()
+  detect()
 }
 
-function onDragOver(e: DragEvent) {
-  e.preventDefault()
+async function selectFile() {
+  const selected = await open({
+    multiple: false,
+    filters: [
+      {
+        name: 'Text',
+        extensions: ['txt', 'csv', 'log', 'json', 'xml', 'yaml', 'yml', 'md', 'ini', 'conf'],
+      },
+    ],
+  })
+  if (typeof selected === 'string') setFile(selected)
 }
+
+let unlistenDrop: (() => void) | null = null
+
+onMounted(async () => {
+  // Windows 下 Tauri 拦截 HTML5 拖放事件，使用原生拖放事件获取真实文件路径
+  unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
+    if (event.payload.type === 'drop' && event.payload.paths.length > 0) {
+      setFile(event.payload.paths[0])
+    }
+  })
+})
+
+onUnmounted(() => {
+  unlistenDrop?.()
+})
 
 async function detect() {
-  if (!inputFile.value) return
+  if (!inputPath.value) return
   try {
-    const path = (inputFile.value as any).path || (inputFile.value as any).name
-    const res = await invoke<{ encoding: string; confidence: number }>('detect_encoding', {
-      filePath: path,
+    const res = await invoke<{ encoding: string; has_bom: boolean }>('detect_encoding', {
+      filePath: inputPath.value,
     })
     detectedEncoding.value = res.encoding
-    confidence.value = res.confidence
+    hasBom.value = res.has_bom
   } catch (e: any) {
     error.value = typeof e === 'string' ? e : e?.message || 'Detection failed'
   }
 }
 
 async function convert() {
-  if (!inputFile.value) return
+  if (!inputPath.value) return
   converting.value = true
   error.value = ''
   try {
-    const path = (inputFile.value as any).path || (inputFile.value as any).name
     const res = await invoke<{
       output_path: string
       source_encoding: string
       had_errors: boolean
     }>('convert_encoding', {
-      filePath: path,
+      filePath: inputPath.value,
       targetEncoding: targetEncoding.value,
     })
     outputPath.value = res.output_path
@@ -80,6 +104,15 @@ async function convert() {
     error.value = typeof e === 'string' ? e : e?.message || 'Conversion failed'
   } finally {
     converting.value = false
+  }
+}
+
+async function openOutput() {
+  if (!outputPath.value) return
+  try {
+    await openPath(outputPath.value)
+  } catch (e: any) {
+    error.value = typeof e === 'string' ? e : e?.message || String(e)
   }
 }
 
@@ -92,22 +125,20 @@ function onTargetChange(val: string) {
   <ToolLayout :title="t('tools.encoding.name')">
     <template #input>
       <div class="encoding-input-panel">
-        <div class="drop-zone" @drop="onFileDrop" @dragover="onDragOver">
+        <div class="drop-zone" @click="selectFile">
           <Upload :size="32" />
-          <p v-if="!inputFile">
-            {{ t('common.dropFile') || 'Drop a text file here' }}
+          <p v-if="!inputPath">
+            {{ t('common.dropFile') }}
           </p>
           <p v-else class="file-name">
             {{ fileName }}
           </p>
         </div>
         <div v-if="detectedEncoding" class="detected-info">
-          {{ t('common.detected') || 'Detected' }}: {{ detectedEncoding }} ({{
-            t('common.confidence') || 'confidence'
-          }}: {{ confidence }})
+          {{ t('common.detected') }}: {{ detectedEncoding }}{{ hasBom ? ' (BOM)' : '' }}
         </div>
         <div class="convert-row">
-          <span class="label">{{ t('common.targetEncoding') || 'Target' }}:</span>
+          <span class="label">{{ t('common.targetEncoding') }}:</span>
           <el-select
             v-model="targetEncoding"
             size="small"
@@ -121,8 +152,8 @@ function onTargetChange(val: string) {
               :value="opt.value"
             />
           </el-select>
-          <el-button type="primary" :loading="converting" :disabled="!inputFile" @click="convert">
-            {{ t('common.convert') || 'Convert' }}
+          <el-button type="primary" :loading="converting" :disabled="!inputPath" @click="convert">
+            {{ t('common.convert') }}
           </el-button>
         </div>
       </div>
@@ -134,20 +165,20 @@ function onTargetChange(val: string) {
       </div>
       <div v-else-if="outputPath" class="result-panel">
         <p v-if="hadErrors" class="warning-msg">
-          {{ t('common.encodingWarning') || 'Some characters could not be mapped.' }}
+          {{ t('common.encodingWarning') }}
         </p>
         <p v-else>
-          {{ t('common.conversionSuccess') || 'Conversion successful!' }}
+          {{ t('common.conversionSuccess') }}
         </p>
         <p class="output-path">
           {{ outputPath }}
         </p>
-        <el-button type="success" :icon="Download">
-          {{ t('common.download') || 'Download' }}
+        <el-button type="success" :icon="FolderOpen" @click="openOutput">
+          {{ t('common.openFile') }}
         </el-button>
       </div>
       <div v-else class="placeholder">
-        {{ t('common.dropFile') || 'Drop a text file to detect encoding' }}
+        {{ t('common.dropFile') }}
       </div>
     </template>
   </ToolLayout>

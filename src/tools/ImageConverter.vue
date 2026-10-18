@@ -1,10 +1,13 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
+import { openPath } from '@tauri-apps/plugin-opener'
+import { getCurrentWebview } from '@tauri-apps/api/webview'
 import { useI18n } from 'vue-i18n'
 import { useAppStore } from '@/stores/app'
 import ToolLayout from '@/components/ToolLayout.vue'
-import { Image as ImageIcon, Upload, Download } from 'lucide-vue-next'
+import { Image as ImageIcon, Upload, FolderOpen } from 'lucide-vue-next'
 
 const { t } = useI18n()
 const appStore = useAppStore()
@@ -20,9 +23,8 @@ const format = ref<string>(
     return 'jpeg'
   })(),
 )
-const inputFile = ref<File | null>(null)
+const inputPath = ref('')
 const fileName = ref('')
-const fileInfo = ref('')
 const outputPath = ref('')
 const result = ref<{
   original_size: number
@@ -39,48 +41,53 @@ const formatOptions = [
   { label: 'WebP', value: 'webp' },
 ]
 
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tiff']
+
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`
   return `${(bytes / 1048576).toFixed(2)} MB`
 }
 
-async function onFileDrop(e: DragEvent) {
-  e.preventDefault()
-  const files = e.dataTransfer?.files
-  if (!files || files.length === 0) return
-  inputFile.value = files[0]
-  fileName.value = files[0].name
-  fileInfo.value = `${files[0].name} — ${formatBytes(files[0].size)}`
+function setFile(path: string) {
+  const name = path.split(/[/\\]/).pop() || path
+  const ext = name.split('.').pop()?.toLowerCase() || ''
+  if (!IMAGE_EXTENSIONS.includes(ext)) {
+    error.value = `Unsupported file type: .${ext}`
+    return
+  }
+  inputPath.value = path
+  fileName.value = name
   result.value = null
   outputPath.value = ''
   error.value = ''
 }
 
-function onDragOver(e: DragEvent) {
-  e.preventDefault()
+async function selectFile() {
+  const selected = await open({
+    multiple: false,
+    filters: [{ name: 'Images', extensions: IMAGE_EXTENSIONS }],
+  })
+  if (typeof selected === 'string') setFile(selected)
 }
 
-async function selectFile() {
-  try {
-    const selected = await (window as any).__TAURI__?.dialog?.open?.({
-      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp'] }],
-    })
-    if (selected) {
-      const path = typeof selected === 'string' ? selected : selected[0]
-      fileName.value = path.split(/[/\\]/).pop() || path
-      fileInfo.value = fileName.value
-      inputFile.value = { name: fileName.value, path } as any
-      result.value = null
-      error.value = ''
+let unlistenDrop: (() => void) | null = null
+
+onMounted(async () => {
+  // Windows 下 Tauri 拦截 HTML5 拖放事件，使用原生拖放事件获取真实文件路径
+  unlistenDrop = await getCurrentWebview().onDragDropEvent((event) => {
+    if (event.payload.type === 'drop' && event.payload.paths.length > 0) {
+      setFile(event.payload.paths[0])
     }
-  } catch {
-    // dialog not available — use drag-drop only
-  }
-}
+  })
+})
+
+onUnmounted(() => {
+  unlistenDrop?.()
+})
 
 async function convert() {
-  if (!inputFile.value) return
+  if (!inputPath.value) return
   converting.value = true
   error.value = ''
   try {
@@ -91,7 +98,7 @@ async function convert() {
       width: number
       height: number
     }>('convert_image', {
-      inputPath: (inputFile.value as any).path || (inputFile.value as any).name,
+      inputPath: inputPath.value,
       outputFormat: format.value,
     })
     result.value = {
@@ -108,6 +115,15 @@ async function convert() {
   }
 }
 
+async function openOutput() {
+  if (!outputPath.value) return
+  try {
+    await openPath(outputPath.value)
+  } catch (e: any) {
+    error.value = typeof e === 'string' ? e : e?.message || String(e)
+  }
+}
+
 // Persist format setting
 watch(format, (val) => {
   appStore.saveToolInput('/image', JSON.stringify({ format: val }))
@@ -118,17 +134,17 @@ watch(format, (val) => {
   <ToolLayout :title="t('tools.image.name')">
     <template #input>
       <div class="image-input-panel">
-        <div class="drop-zone" @drop="onFileDrop" @dragover="onDragOver" @click="selectFile">
+        <div class="drop-zone" @click="selectFile">
           <Upload :size="32" />
-          <p v-if="!inputFile">
-            {{ t('common.dropFile') || 'Drop image here or click to select' }}
+          <p v-if="!inputPath">
+            {{ t('common.dropFile') }}
           </p>
           <p v-else class="file-name">
-            {{ fileInfo }}
+            {{ fileName }}
           </p>
         </div>
         <div class="format-row">
-          <span class="label">{{ t('common.format') || 'Format' }}:</span>
+          <span class="label">{{ t('common.fileFormat') }}:</span>
           <el-select v-model="format" size="small" style="width: 120px">
             <el-option
               v-for="opt in formatOptions"
@@ -141,10 +157,10 @@ watch(format, (val) => {
             type="primary"
             :icon="ImageIcon"
             :loading="converting"
-            :disabled="!inputFile"
+            :disabled="!inputPath"
             @click="convert"
           >
-            {{ t('common.convert') || 'Convert' }}
+            {{ t('common.convert') }}
           </el-button>
         </div>
       </div>
@@ -157,28 +173,19 @@ watch(format, (val) => {
       <div v-else-if="result" class="result-panel">
         <div class="result-info">
           <p>{{ result.width }} × {{ result.height }}px</p>
-          <p>{{ t('common.original') || 'Original' }}: {{ formatBytes(result.original_size) }}</p>
-          <p>{{ t('common.converted') || 'Converted' }}: {{ formatBytes(result.output_size) }}</p>
+          <p>{{ t('common.original') }}: {{ formatBytes(result.original_size) }}</p>
+          <p>{{ t('common.converted') }}: {{ formatBytes(result.output_size) }}</p>
           <p v-if="result.original_size > 0">
-            {{ t('common.reduction') || 'Saved' }}:
+            {{ t('common.reduction') }}:
             {{ ((1 - result.output_size / result.original_size) * 100).toFixed(1) }}%
           </p>
         </div>
-        <el-button
-          v-if="outputPath"
-          type="success"
-          :icon="Download"
-          @click="
-            () => {
-              /* open in system */
-            }
-          "
-        >
-          {{ t('common.download') || 'Download' }}
+        <el-button v-if="outputPath" type="success" :icon="FolderOpen" @click="openOutput">
+          {{ t('common.openFile') }}
         </el-button>
       </div>
       <div v-else class="placeholder">
-        {{ t('common.dropFile') || 'Drop an image to get started' }}
+        {{ t('common.dropFile') }}
       </div>
     </template>
   </ToolLayout>
