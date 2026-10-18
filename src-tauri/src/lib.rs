@@ -620,6 +620,46 @@ async fn merge_ts(dir: String, ffmpeg_path: String) -> Result<String, AppError> 
     Ok(output_path.to_string_lossy().to_string())
 }
 
+/// Merge the downloaded TS segments of a specific task into an MP4 file.
+/// Segment directory is derived from task_id: {temp}/ztools/{task_id}/segments.
+#[tauri::command]
+async fn merge_task_segments(
+    task_id: String,
+    ffmpeg_path: String,
+    output_dir: String,
+    filename: String,
+) -> Result<String, AppError> {
+    let dir_path = std::env::temp_dir()
+        .join("ztools")
+        .join(&task_id)
+        .join("segments");
+    if !dir_path.is_dir() {
+        return Err(AppError::InvalidInput(format!(
+            "TS segment directory does not exist: {}",
+            dir_path.display()
+        )));
+    }
+
+    let output_path = std::path::PathBuf::from(&output_dir).join(&filename);
+    info!(
+        "Merging task segments: task_id={}, dir={}, output={}",
+        task_id,
+        dir_path.display(),
+        output_path.display()
+    );
+
+    let conv_dir = dir_path.clone();
+    let conv_output = output_path.clone();
+    tokio::task::spawn_blocking(move || {
+        m3u8::converter::convert_to_mp4(&conv_dir, &conv_output, &ffmpeg_path)
+    })
+    .await
+    .map_err(|e| AppError::Unknown(format!("Merge task panicked: {}", e)))?
+    .map_err(AppError::Ffmpeg)?;
+
+    Ok(output_path.to_string_lossy().to_string())
+}
+
 /// Convert an image file between formats using the `image` crate.
 #[tauri::command]
 async fn convert_image(
@@ -750,6 +790,7 @@ pub fn run() {
             cancel_download,
             check_ffmpeg,
             merge_ts,
+            merge_task_segments,
             get_default_download_dir,
             hash_file,
             convert_image,

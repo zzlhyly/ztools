@@ -128,6 +128,19 @@ export async function invokeMergeTs(dir: string, ffmpegPath: string): Promise<st
   }
 }
 
+export async function invokeMergeTaskSegments(
+  taskId: string,
+  ffmpegPath: string,
+  outputDir: string,
+  filename: string,
+): Promise<string> {
+  try {
+    return await invoke<string>('merge_task_segments', { taskId, ffmpegPath, outputDir, filename })
+  } catch (e) {
+    throw TauriError.from(e, 'DOWNLOAD_ERROR')
+  }
+}
+
 // ---- Event listeners ----
 
 export async function onDownloadProgress(

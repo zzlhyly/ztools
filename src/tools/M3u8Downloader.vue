@@ -12,6 +12,7 @@ import {
   invokeCancelDownload,
   invokeCheckFfmpeg,
   invokeMergeTs,
+  invokeMergeTaskSegments,
   invokeGetDefaultDownloadDir,
   onDownloadProgress,
   onDownloadComplete,
@@ -41,6 +42,7 @@ const showCurlInput = ref(false)
 const showHeadersConfig = ref(false)
 const showQualitySelect = ref(false)
 const qualityTaskId = ref<string | null>(null)
+const mergingTaskId = ref('')
 
 const qualityTask = computed(() => store.tasks.find((task) => task.id === qualityTaskId.value))
 
@@ -444,6 +446,41 @@ async function handleMergeTs() {
   }
 }
 
+// 任务卡片上的合并按钮：直接用该任务已下载的分段目录合并，输出到下载目录下的任务文件名
+async function handleMergeTaskSegments(taskId: string) {
+  const task = store.tasks.find((t) => t.id === taskId)
+  if (!task || !task.filename) return
+
+  const ffmpegOk = await invokeCheckFfmpeg(store.config.ffmpegPath)
+  if (!ffmpegOk) {
+    ElMessage.error(t('common.ffmpegNotFound'))
+    return
+  }
+
+  mergingTaskId.value = taskId
+  try {
+    const outputPath = await invokeMergeTaskSegments(
+      taskId,
+      store.config.ffmpegPath,
+      store.config.downloadDir,
+      task.filename,
+    )
+    store.updateTask(task.id, {
+      status: 'done',
+      progress: 100,
+      speed: '',
+      error: undefined,
+      outputPath,
+      completedAt: Date.now(),
+    })
+    ElMessage.success(`${t('common.mergeTsDone')}: ${outputPath}`)
+  } catch (err) {
+    ElMessage.error(String(err))
+  } finally {
+    mergingTaskId.value = ''
+  }
+}
+
 async function handleRetryTask(taskId: string) {
   const task = store.tasks.find((t) => t.id === taskId)
   if (!task) return
@@ -726,6 +763,16 @@ onUnmounted(() => {
             :status="task.status"
           />
           <div class="task-actions">
+            <el-tooltip :content="t('common.mergeTs')" placement="top">
+              <el-button
+                v-if="task.status === 'error' || task.status === 'cancelled'"
+                :icon="Combine"
+                size="small"
+                circle
+                :loading="mergingTaskId === task.id"
+                @click="handleMergeTaskSegments(task.id)"
+              />
+            </el-tooltip>
             <el-button
               v-if="
                 task.status === 'error' || task.status === 'cancelled' || task.status === 'done'
